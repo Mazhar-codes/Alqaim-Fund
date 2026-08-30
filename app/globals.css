@@ -2,6 +2,46 @@
 @tailwind components;
 @tailwind utilities;
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
-  @apply bg-gray-50 text-gray-900;
+  @apply bg-gray-50 text-gray-900 antialiased;
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+}
+
+::selection {
+  @apply bg-brand-200 text-brand-900;
+}
+
+/* Slim, unobtrusive scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 rounded-full;
+}
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-400;
+}
+
+@layer utilities {
+  .animation-delay-2000 {
+    animation-delay: 2s;
+  }
+  .animation-delay-4000 {
+    animation-delay: 4s;
+  }
+
+  .skeleton {
+    @apply relative overflow-hidden bg-gray-200/70;
+    background-image: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
+    background-size: 200% 100%;
+    animation: shimmer 1.6s infinite linear;
+  }
 }

@@ -259,31 +259,85 @@ Everything for a working v1 has been scaffolded:
   Harmless, but the user may want it cleared before real members start
   registering — hasn't been asked about yet, don't delete unprompted.
 
+## Status: Visual/UX redesign pass (this session)
+
+The user said the site "doesn't look good and attractive," asked for
+graphics/interactive things/buttons and for everything to still be fully
+functional. Did a full design pass, not just a coat of paint:
+
+- Added `lucide-react` (real npm package, current major is 1.x — don't be
+  thrown by the version number, it's legit) for icons everywhere.
+- `next/font/google` Inter loaded in `app/layout.jsx` via a CSS var
+  (`--font-inter`), wired into `tailwind.config.js` `fontFamily.sans`.
+- `tailwind.config.js` extended: fuller `brand`/`accent` color ramps, and
+  keyframe animations (`fade-in-up`, `fade-in`, `blob`, `scale-in`,
+  `shimmer`) used for scroll reveals, blob backgrounds, modals, and
+  skeleton loaders. `app/globals.css` adds `scroll-behavior: smooth`, a
+  slim custom scrollbar, and a `.skeleton` shimmer utility.
+- New shared components: `Button.jsx` (variants, loading spinner, hover
+  lift), `Modal.jsx` (accessible dialog — Escape to close, backdrop click),
+  `FileDropzone.jsx` (drag-and-drop styled file input, still a real hidden
+  `<input type="file">` underneath — confirmed the browser-automation
+  `file_upload` tool still targets it fine despite being visually hidden),
+  `Reveal.jsx` + `lib/useReveal.js` (IntersectionObserver-based
+  scroll-triggered fade-in, one-shot per element).
+- **Replaced `window.prompt()` with real `Modal` dialogs** in
+  `app/admin/payments` and `app/admin/loans` (reject reason / admin note /
+  repayment tenure). This was flagged as a rough edge last session because
+  `window.prompt()` blocks browser-automation entirely once triggered —
+  now fixed, and manually re-verified end-to-end in a live browser: opened
+  the reject-payment modal, filled the reason, submitted, watched the
+  queue refresh correctly. No more need to route around it via curl.
+- Landing page (`app/page.jsx`) fully rebuilt: gradient-blob hero with
+  animated background shapes, "How It Works" 3-step section with a
+  connecting line, enhanced `PlanCard` (icons, "Most Popular" badge on the
+  middle plan, hover lift), feature cards, gradient CTA band, footer.
+  Manually scrolled through the whole thing in a real browser to confirm
+  every section renders and animates correctly (not just "should render").
+- Every dashboard/list page got: icon-labeled stat cards with hover lift,
+  skeleton loaders instead of plain "Loading…" text, empty states with an
+  icon instead of a bare sentence, `StatusBadge` got status-specific icons.
+- `Navbar` rebuilt: sticky + backdrop-blur, active-link highlighting via
+  `usePathname`, icons per link, a real mobile hamburger menu (`lg:hidden`
+  breakpoint — not manually re-verified at a narrow viewport this session
+  because `resize_window` didn't visibly change the automated screenshot
+  size in this environment; the responsive classes follow the same
+  mobile-first Tailwind pattern used throughout and should be trusted, but
+  if the user reports mobile nav issues, check this first).
+- Found and fixed a real bug introduced by testing, not shipped: initially
+  gave the `ACTIVE` status (used for both "loan actively being repaid" and
+  "member account active") a spinning `Loader2` icon — looked like a
+  stuck loading spinner on a perfectly normal active member row. Caught it
+  by actually looking at the rendered admin members table, not just
+  reading the code. Fixed to a static `Activity` icon, no animation.
+- Full manual re-verification pass in a real browser against the live
+  Neon DB + Firebase + Cloudinary (same rigor as the previous session):
+  admin login → overview stats correct → member list/ledger detail with
+  photo/status/icons all correct → payment queue reject-via-modal → member
+  login → loan page eligibility-blocked state → payments page
+  FileDropzone (uploaded a real file, confirmed the green "uploaded"
+  state renders). Everything held up.
+
 ## Status: WHAT'S NEXT
 
 1. Deploy to Vercel: import the GitHub repo, add every var from `.env`
    (Neon + Cloudinary + Firebase are ALL known-good now, verified live) as
    Vercel Environment Variables, deploy. Free `*.vercel.app` domain.
-2. Decide what to do with the test data (USR001 etc.) before real launch —
-   ask the user, don't just delete it.
+2. Decide what to do with the test data (USR001 etc., plus a rejected
+   MODALTEST01 payment from this session's modal test) before real
+   launch — ask the user, don't just delete it.
 3. Bilingual Urdu/English + RTL UI — not started, do in a later pass.
 4. SMS provider for MemberID notification — stubbed behind
    `Settings.smsEnabled`, no provider wired up (`lib/notify.js`).
 5. Admin login currently uses `ADMIN_SEED_EMAIL` (default
    `admin@alqaimfund.local`) as a placeholder Firebase email — fine as-is,
    just flagging it's synthetic, not a real inbox.
+6. Mobile-viewport nav wasn't visually re-verified this session (tooling
+   limitation, see above) — worth a real phone/devtools check before
+   calling the redesign fully done.
 
 ## Known rough edges / things to double check when revisiting
 
-- `app/admin/payments` and `app/admin/loans` use `window.prompt()` for the
-  admin-note / reject-reason / tenure inputs. This works fine for a real
-  human clicking in a real browser, but (a) it's blocked in some embedded/
-  cross-origin contexts and (b) it's why the loan-approval flow had to be
-  tested via a direct API call instead of browser automation this session
-  — `window.prompt()` blocks all further browser-automation events once
-  triggered. Consider replacing with a small inline form/modal if this
-  becomes a recurring friction point, but it's a UX nice-to-have, not a
-  correctness bug — the underlying API works correctly either way.
 - `app/api/admin/loans` PATCH approve spreads the repayment schedule across
   whatever `PENDING` installments currently exist for the member — if a
   member is near the end of their cycle there may be fewer installments left

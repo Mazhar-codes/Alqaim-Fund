@@ -1,42 +1,123 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+import {
+  HandCoins,
+  LayoutDashboard,
+  Wallet,
+  HeartHandshake,
+  Receipt,
+  UserCircle,
+  Users,
+  ClipboardCheck,
+  FileBarChart,
+  Settings,
+  LogOut,
+  Menu,
+  X,
+} from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+
+const MEMBER_LINKS = [
+  { href: "/member/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/member/payments", label: "Payments", icon: Wallet },
+  { href: "/member/loan", label: "Emergency Loan", icon: HeartHandshake },
+  { href: "/member/transactions", label: "Transactions", icon: Receipt },
+  { href: "/member/profile", label: "Profile", icon: UserCircle },
+];
+
+const ADMIN_LINKS = [
+  { href: "/admin", label: "Overview", icon: LayoutDashboard },
+  { href: "/admin/members", label: "Members", icon: Users },
+  { href: "/admin/payments", label: "Payment Queue", icon: ClipboardCheck },
+  { href: "/admin/loans", label: "Loan/Emergency Queue", icon: HeartHandshake },
+  { href: "/admin/reports", label: "Reports", icon: FileBarChart },
+  { href: "/admin/settings", label: "Settings", icon: Settings },
+];
 
 export default function Navbar({ variant = "public" }) {
   const { firebaseUser, signOut } = useAuth();
+  const pathname = usePathname();
+  const [open, setOpen] = useState(false);
+  const links = variant === "member" ? MEMBER_LINKS : variant === "admin" ? ADMIN_LINKS : [];
 
   return (
-    <nav className="flex items-center justify-between border-b bg-white px-4 py-3 sm:px-6">
-      <Link href="/" className="text-lg font-bold text-brand-700">
-        Alqaim Fund
-      </Link>
-      <div className="flex items-center gap-4 text-sm">
-        {variant === "member" && (
-          <>
-            <Link href="/member/dashboard" className="hover:text-brand-700">Dashboard</Link>
-            <Link href="/member/payments" className="hover:text-brand-700">Payments</Link>
-            <Link href="/member/loan" className="hover:text-brand-700">Emergency Loan</Link>
-            <Link href="/member/transactions" className="hover:text-brand-700">Transactions</Link>
-            <Link href="/member/profile" className="hover:text-brand-700">Profile</Link>
-          </>
-        )}
-        {variant === "admin" && (
-          <>
-            <Link href="/admin" className="hover:text-brand-700">Overview</Link>
-            <Link href="/admin/members" className="hover:text-brand-700">Members</Link>
-            <Link href="/admin/payments" className="hover:text-brand-700">Payment Queue</Link>
-            <Link href="/admin/loans" className="hover:text-brand-700">Loan/Emergency Queue</Link>
-            <Link href="/admin/reports" className="hover:text-brand-700">Reports</Link>
-            <Link href="/admin/settings" className="hover:text-brand-700">Settings</Link>
-          </>
-        )}
-        {firebaseUser && (
-          <button onClick={signOut} className="rounded bg-gray-100 px-3 py-1 hover:bg-gray-200">
-            Log out
-          </button>
-        )}
+    <nav className="sticky top-0 z-40 border-b border-gray-200/80 bg-white/80 backdrop-blur-md">
+      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
+        <Link href="/" className="flex items-center gap-2 text-lg font-bold text-brand-700">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-brand-600 to-brand-800 text-white shadow-sm">
+            <HandCoins className="h-4.5 w-4.5" />
+          </span>
+          Alqaim Fund
+        </Link>
+
+        <div className="hidden items-center gap-1 text-sm lg:flex">
+          {links.map(({ href, label, icon: Icon }) => {
+            const active = pathname === href;
+            return (
+              <Link
+                key={href}
+                href={href}
+                className={`flex items-center gap-1.5 rounded-lg px-3 py-2 font-medium transition-colors ${
+                  active ? "bg-brand-50 text-brand-700" : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+                {label}
+              </Link>
+            );
+          })}
+          {firebaseUser && (
+            <button
+              onClick={signOut}
+              className="ml-2 flex items-center gap-1.5 rounded-lg bg-gray-100 px-3 py-2 font-medium text-gray-700 transition hover:bg-gray-200"
+            >
+              <LogOut className="h-4 w-4" />
+              Log out
+            </button>
+          )}
+        </div>
+
+        <button
+          onClick={() => setOpen((o) => !o)}
+          className="rounded-lg p-2 text-gray-600 hover:bg-gray-100 lg:hidden"
+          aria-label="Toggle menu"
+        >
+          {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+        </button>
       </div>
+
+      {open && (
+        <div className="border-t border-gray-100 bg-white px-4 py-2 lg:hidden">
+          {links.map(({ href, label, icon: Icon }) => {
+            const active = pathname === href;
+            return (
+              <Link
+                key={href}
+                href={href}
+                onClick={() => setOpen(false)}
+                className={`flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium ${
+                  active ? "bg-brand-50 text-brand-700" : "text-gray-600 hover:bg-gray-50"
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+                {label}
+              </Link>
+            );
+          })}
+          {firebaseUser && (
+            <button
+              onClick={signOut}
+              className="mt-1 flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-gray-600 hover:bg-gray-50"
+            >
+              <LogOut className="h-4 w-4" />
+              Log out
+            </button>
+          )}
+        </div>
+      )}
     </nav>
   );
 }
