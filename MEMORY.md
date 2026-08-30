@@ -194,34 +194,96 @@ Everything for a working v1 has been scaffolded:
   Rebuilt clean afterward (all 33 routes) — confirms this is a genuinely
   fixed bug, not just "should be fine."
 
+## Status: Firebase is live, full flow verified end-to-end
+
+- Real Firebase project `alqaimfund`: web app config + Admin SDK service
+  account both pulled straight from files on disk instead of pasting
+  secrets in chat — client config came from the Firebase console snippet
+  the user pasted, but the Admin SDK service account JSON was found and
+  read directly from `C:\Users\<user>\Downloads\alqaimfund-firebase-adminsdk-*.json`
+  (glob by `-iname "*firebase-adminsdk*.json"`) — worth remembering this
+  trick for future secret-file handoffs, it avoids the value ever touching
+  the chat transcript.
+- Real admin account seeded via `npm run seed:admin` with a user-chosen
+  password (not the `admin123` placeholder) — confirmed both in Firebase
+  (`getUserByEmail` succeeded) and in Postgres (`role=ADMIN` row exists).
+- **Full manual verification pass, all against the live Neon DB + real
+  Firebase + real Cloudinary (not mocked, not assumed):**
+  - Admin login (MemberID-style username → email lookup → Firebase
+    signIn → custom claim check) — works, redirects to `/admin` overview
+    with correct (zero) stats.
+  - Member registration — creates Firebase user, generates `USR001`,
+    builds the 12-installment schedule with correct due dates (verified
+    the Aug-30-2026-is-a-Sunday → rolls to Aug 31 case, and the
+    Feb-28-2027-is-a-Sunday → rolls to Mar 1 case).
+  - Member login via MemberID + password (the lookup-then-signIn flow).
+  - Payment upload → Cloudinary upload → auto-verification (amount +
+    date match) → installment marked PAID → ledger OUT entry — did this
+    3x to reach loan eligibility (3 paid installments).
+  - Emergency loan application: eligibility gate (`Eligible — max Rs.
+    40,000` for a 2000/mo plan), reason dropdown, description, and a
+    Cloudinary-uploaded supporting document — confirmed the real
+    `proofUrl` landed in Postgres.
+  - Admin loan approval (tested via a real Firebase-issued ID token +
+    curl, since the UI's `window.prompt()` calls for admin note/tenure
+    would have blocked the browser-automation session — see rough edge
+    below) — released funds (`IN` ledger entry), spread the Rs. 20,000
+    over 5 installments as Rs. 4,000 `loanDeduction` each (installments
+    4–8), left installments 9–12 untouched.
+  - Loan repayment: paid installment #4 (Rs. 2,000 plan + Rs. 4,000
+    deduction = Rs. 6,000) — correctly split into two ledger rows
+    (`INSTALLMENT_PAYMENT` 2,000 + `LOAN_REPAYMENT` 4,000), created a
+    `LoanRepayment` row, updated `loan.totalRepaid` to 4,000, loan stayed
+    `ACTIVE` (correctly, since 4,000 < 20,000).
+  - Admin `/api/admin/stats` reconciled exactly against manual math:
+    `collectionThisMonth: 12000` (3×2000 + 6000), `loanOutstanding: 16000`
+    (20000-4000) — confirms the aggregation queries are correct, not just
+    the write paths.
+- **Found and fixed a real cross-cutting bug during this pass**: due
+  dates / payment dates displayed one day off (e.g. a payment on Aug 30
+  showed as "29/08/2026"). Root cause: `lib/dueDate.js` built due dates
+  with local-timezone `new Date(year, month, day)` while date-only strings
+  from `<input type="date">` parse as **UTC** midnight — a mismatch that
+  shifts by ±1 day depending on which timezone the server process (or the
+  viewer's browser) happens to be in. Fixed by rebuilding `lib/dueDate.js`
+  entirely on `Date.UTC`/`getUTC*`, fixing the same local-getter bug in
+  `lib/payments.js`'s `passesAutoVerification` month comparison, and adding
+  `lib/formatDate.js` (`toLocaleDateString(undefined, {timeZone:"UTC"})`)
+  which every page now uses instead of raw `.toLocaleDateString()`. This
+  is exactly the kind of thing that reads as "probably fine" until you
+  actually run it against a real clock in a real timezone — worth
+  remembering as a category of bug to watch for if more date logic gets
+  added later.
+- Test data now sits in the real `alqaimfund` Neon project: member
+  `USR001` ("Test Member One"), one admin, 4 payments, 1 active loan.
+  Harmless, but the user may want it cleared before real members start
+  registering — hasn't been asked about yet, don't delete unprompted.
+
 ## Status: WHAT'S NEXT
 
-1. Get Firebase project set up (Auth: Email/Password enabled — do NOT
-   enable Storage, we're on Cloudinary for files) and fill in the
-   `NEXT_PUBLIC_FIREBASE_*` + `FIREBASE_ADMIN_*` vars in `.env`. This is the
-   one remaining piece blocking `npm run seed:admin` and any real
-   login/register test.
-2. `npm run seed:admin` — creates the Firebase admin user + custom claim +
-   Prisma User row. Pick a real `ADMIN_SEED_PASSWORD` in `.env` before this
-   (not the `admin123` default) if this is heading toward production.
-3. `npm run dev` and manually click through the real flow: register → login
-   → upload a payment (and a profile picture) → (as admin) approve it →
-   apply for an emergency loan → approve it → confirm the ledger and
-   installment `loanDeduction` show up correctly. Schema + seed data +
-   Cloudinary uploads are confirmed live now, but the full request flow
-   hasn't been exercised against real Firebase Auth yet.
-4. Deploy to Vercel: import the GitHub repo, add every var from `.env`
-   (Neon + Cloudinary are known-good now, Firebase still pending) as Vercel
-   Environment Variables, deploy. Free `*.vercel.app` domain, no cost.
-5. Bilingual Urdu/English + RTL UI — not started, do in a later pass.
-6. SMS provider for MemberID notification — stubbed behind
+1. Deploy to Vercel: import the GitHub repo, add every var from `.env`
+   (Neon + Cloudinary + Firebase are ALL known-good now, verified live) as
+   Vercel Environment Variables, deploy. Free `*.vercel.app` domain.
+2. Decide what to do with the test data (USR001 etc.) before real launch —
+   ask the user, don't just delete it.
+3. Bilingual Urdu/English + RTL UI — not started, do in a later pass.
+4. SMS provider for MemberID notification — stubbed behind
    `Settings.smsEnabled`, no provider wired up (`lib/notify.js`).
-7. Admin login currently uses `ADMIN_SEED_EMAIL` (default
+5. Admin login currently uses `ADMIN_SEED_EMAIL` (default
    `admin@alqaimfund.local`) as a placeholder Firebase email — fine as-is,
    just flagging it's synthetic, not a real inbox.
 
 ## Known rough edges / things to double check when revisiting
 
+- `app/admin/payments` and `app/admin/loans` use `window.prompt()` for the
+  admin-note / reject-reason / tenure inputs. This works fine for a real
+  human clicking in a real browser, but (a) it's blocked in some embedded/
+  cross-origin contexts and (b) it's why the loan-approval flow had to be
+  tested via a direct API call instead of browser automation this session
+  — `window.prompt()` blocks all further browser-automation events once
+  triggered. Consider replacing with a small inline form/modal if this
+  becomes a recurring friction point, but it's a UX nice-to-have, not a
+  correctness bug — the underlying API works correctly either way.
 - `app/api/admin/loans` PATCH approve spreads the repayment schedule across
   whatever `PENDING` installments currently exist for the member — if a
   member is near the end of their cycle there may be fewer installments left
@@ -229,3 +291,7 @@ Everything for a working v1 has been scaffolded:
   creating new ones. Revisit if that's not the desired behavior.
 - No pagination anywhere yet (admin members list caps at 200, reports have
   none) — fine for an MVP, would need it at real scale.
+- Running `next build` while `next dev` is also running against the same
+  `.next` directory corrupts the dev server's cache (`Cannot find module
+  './276.js'` style errors) — always stop the dev server first, or use a
+  separate working copy, before running a production build for verification.

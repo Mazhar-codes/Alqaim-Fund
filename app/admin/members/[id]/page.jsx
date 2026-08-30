@@ -6,6 +6,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import Navbar from "@/components/Navbar";
 import StatusBadge from "@/components/StatusBadge";
 import { useAuth } from "@/context/AuthContext";
+import { formatDate } from "@/lib/formatDate";
 
 function MemberLedgerContent() {
   const { authedFetch } = useAuth();
@@ -75,7 +76,7 @@ function MemberLedgerContent() {
       <div className="mt-6 grid gap-4 sm:grid-cols-3">
         <Stat label="Paid Installments" value={member.paidInstallments} />
         <Stat label="Total Paid" value={`Rs. ${Number(member.totalPaid).toLocaleString()}`} />
-        <Stat label="Joined" value={new Date(member.joinDate).toLocaleDateString()} />
+        <Stat label="Joined" value={formatDate(member.joinDate)} />
       </div>
 
       <Section title="Installments">
@@ -83,7 +84,7 @@ function MemberLedgerContent() {
           rows={member.installments}
           cols={["installmentNumber", "dueDate", "amount", "loanDeduction", "status"]}
           render={{
-            dueDate: (v) => new Date(v).toLocaleDateString(),
+            dueDate: (v) => formatDate(v),
             amount: (v) => `Rs. ${Number(v).toLocaleString()}`,
             loanDeduction: (v) => (Number(v) > 0 ? `Rs. ${Number(v).toLocaleString()}` : "—"),
             status: (v) => <StatusBadge status={v} />,
@@ -96,7 +97,7 @@ function MemberLedgerContent() {
           rows={member.loanRequests}
           cols={["createdAt", "reasonCategory", "amount", "totalRepaid", "status", "adminNote"]}
           render={{
-            createdAt: (v) => new Date(v).toLocaleDateString(),
+            createdAt: (v) => formatDate(v),
             reasonCategory: (v) => v.replaceAll("_", " "),
             amount: (v) => `Rs. ${Number(v).toLocaleString()}`,
             totalRepaid: (v) => `Rs. ${Number(v).toLocaleString()}`,
@@ -110,7 +111,7 @@ function MemberLedgerContent() {
           rows={member.transactions}
           cols={["createdAt", "category", "direction", "amount", "balanceAfter"]}
           render={{
-            createdAt: (v) => new Date(v).toLocaleDateString(),
+            createdAt: (v) => formatDate(v),
             category: (v) => v.replaceAll("_", " "),
             direction: (v) => (
               <span className={v === "IN" ? "font-medium text-green-700" : "font-medium text-red-700"}>{v}</span>

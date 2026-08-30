@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Navbar from "@/components/Navbar";
 import { useAuth } from "@/context/AuthContext";
+import { formatDate } from "@/lib/formatDate";
 
 const CATEGORY_LABELS = {
   INSTALLMENT_PAYMENT: "Installment Payment",
@@ -44,7 +45,7 @@ function TransactionsContent() {
           <tbody>
             {transactions.map((t) => (
               <tr key={t.id} className="border-t">
-                <td className="px-4 py-2">{new Date(t.createdAt).toLocaleDateString()}</td>
+                <td className="px-4 py-2">{formatDate(t.createdAt)}</td>
                 <td className="px-4 py-2">{t.description || CATEGORY_LABELS[t.category] || t.category}</td>
                 <td className="px-4 py-2">
                   <span className={t.direction === "IN" ? "font-medium text-green-700" : "font-medium text-red-700"}>

@@ -5,6 +5,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import Navbar from "@/components/Navbar";
 import StatusBadge from "@/components/StatusBadge";
 import { useAuth } from "@/context/AuthContext";
+import { formatDate } from "@/lib/formatDate";
 
 function DashboardContent() {
   const { authedFetch } = useAuth();
@@ -46,7 +47,7 @@ function DashboardContent() {
         <Stat label="Installments Paid" value={`${overview.paidInstallments} / ${overview.plan.tenureMonths}`} />
         <Stat
           label="Next Due Date"
-          value={overview.nextDueDate ? new Date(overview.nextDueDate).toLocaleDateString() : "—"}
+          value={overview.nextDueDate ? formatDate(overview.nextDueDate) : "—"}
         />
       </div>
 
@@ -77,7 +78,7 @@ function DashboardContent() {
             {installments.map((i) => (
               <tr key={i.id} className="border-t">
                 <td className="px-4 py-2">{i.installmentNumber}</td>
-                <td className="px-4 py-2">{new Date(i.dueDate).toLocaleDateString()}</td>
+                <td className="px-4 py-2">{formatDate(i.dueDate)}</td>
                 <td className="px-4 py-2">Rs. {Number(i.amount).toLocaleString()}</td>
                 <td className="px-4 py-2">
                   {Number(i.loanDeduction) > 0 ? `Rs. ${Number(i.loanDeduction).toLocaleString()}` : "—"}

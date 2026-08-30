@@ -6,6 +6,7 @@ import Navbar from "@/components/Navbar";
 import StatusBadge from "@/components/StatusBadge";
 import { useAuth } from "@/context/AuthContext";
 import { uploadToCloudinary } from "@/lib/cloudinary";
+import { formatDate } from "@/lib/formatDate";
 
 function LoanContent() {
   const { authedFetch } = useAuth();
@@ -149,7 +150,7 @@ function LoanContent() {
           <tbody>
             {data.loans.map((l) => (
               <tr key={l.id} className="border-t">
-                <td className="px-4 py-2">{new Date(l.createdAt).toLocaleDateString()}</td>
+                <td className="px-4 py-2">{formatDate(l.createdAt)}</td>
                 <td className="px-4 py-2">{l.reasonCategory.replaceAll("_", " ")}</td>
                 <td className="px-4 py-2">Rs. {Number(l.amount).toLocaleString()}</td>
                 <td className="px-4 py-2">Rs. {Number(l.totalRepaid).toLocaleString()}</td>

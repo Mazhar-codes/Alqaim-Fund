@@ -6,6 +6,7 @@ import Navbar from "@/components/Navbar";
 import StatusBadge from "@/components/StatusBadge";
 import { useAuth } from "@/context/AuthContext";
 import { uploadToCloudinary } from "@/lib/cloudinary";
+import { formatDate } from "@/lib/formatDate";
 
 function PaymentsContent() {
   const { authedFetch } = useAuth();
@@ -123,7 +124,7 @@ function PaymentsContent() {
           <tbody>
             {payments.map((p) => (
               <tr key={p.id} className="border-t">
-                <td className="px-4 py-2">{new Date(p.paymentDate).toLocaleDateString()}</td>
+                <td className="px-4 py-2">{formatDate(p.paymentDate)}</td>
                 <td className="px-4 py-2">Rs. {Number(p.amount).toLocaleString()}</td>
                 <td className="px-4 py-2">{p.transactionId || "—"}</td>
                 <td className="px-4 py-2"><StatusBadge status={p.status} /></td>
