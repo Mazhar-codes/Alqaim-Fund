@@ -3,3 +3,10 @@ node_modules/
 .env
 .env.local
 *.log
+.neon
+
+# Local AI agent tooling (Claude Code skills etc.) — not part of the app,
+# and the installed symlinks use machine-specific absolute paths.
+.agents/
+.claude/
+skills-lock.json

@@ -121,24 +121,63 @@ Everything for a working v1 has been scaffolded:
   - The `.env` used for this build test (dummy Neon + dummy Firebase values)
     was deleted afterward — nothing real was ever plugged in.
 
+## Status: GitHub + Neon are live
+
+- Pushed to GitHub: https://github.com/Mazhar-codes/Alqaim-Fund (branch
+  `main`). `git remote -v` already points there — future changes are just
+  `git add` / `commit` / `push`.
+- Installed the Neon agent skills (`.agents/skills/neon`,
+  `.agents/skills/neon-postgres`, symlinked into `.claude/skills`) via
+  `npx skills add neondatabase/agent-skills -s neon -s neon-postgres -y`.
+- Real Neon project connected: org `org-nameless-moon-21951461`
+  (syedmazharhussainshah7@gmail.com), project `alqaimfund`
+  (`jolly-mouse-31772592`), region `aws-us-east-2`, default branch
+  `production`. Authenticated via an **org-scoped API key** the user pasted
+  in chat (not a personal key — `neon me` fails with "not allowed for
+  organization API keys", but `neon projects list --org-id ...` and
+  everything else works fine with `--org-id` supplied or after `neon link`).
+- `neon link --project-id jolly-mouse-31772592 --org-id org-nameless-moon-21951461`
+  was run in the project root — this created `.neon` (linked context) and
+  `.env.local` (pulled `DATABASE_URL` + `DATABASE_URL_UNPOOLED`); both are
+  now in `.gitignore` (the Neon CLI added them itself, don't remove).
+- **This app only uses Neon for Lakebase Postgres** — no Neon Auth, Object
+  Storage, Functions, or AI Gateway. Auth is Firebase, file storage is
+  Firebase Storage (see architecture decision above). Don't wire up the
+  other Neon services unless the user explicitly asks to move off Firebase.
+- `.env` (real, gitignored) now has real values for `DATABASE_URL` (Neon's
+  pooled URL, `-pooler` host, with `&pgbouncer=true&connection_limit=1`
+  appended — Neon's pulled value doesn't include those Prisma-recommended
+  params, added manually) and `DIRECT_URL` (Neon's unpooled/direct host,
+  from `DATABASE_URL_UNPOOLED`). Firebase vars in `.env` are still empty.
+- `npx prisma migrate deploy` applied the `20260830000000_init` migration to
+  the real database — all tables exist on Neon now, verified with
+  `neon psql production -- -c 'select ... from plans'`.
+  `npm run prisma:seed` ran successfully — plans A/B/C and the default
+  Settings row are confirmed present via a live query.
+- `npm run seed:admin` has **not** been run yet — it needs real Firebase
+  Admin credentials, which aren't in `.env` yet.
+
 ## Status: WHAT'S NEXT
 
-1. Wire up a **real** Neon DB + Firebase project in `.env` (copy from
-   `.env.example`), then `npx prisma migrate deploy` (applies the
-   already-generated `20260830000000_init` migration) or
-   `npx prisma migrate dev` if you want to keep generating new migrations
-   from here.
-2. `npm run prisma:seed` (plans + settings), `npm run seed:admin` (Firebase
-   admin user + custom claim).
+1. Get Firebase project set up (Auth: Email/Password enabled, Storage
+   enabled) and fill in the `NEXT_PUBLIC_FIREBASE_*` + `FIREBASE_ADMIN_*`
+   vars in `.env`.
+2. `npm run seed:admin` — creates the Firebase admin user + custom claim +
+   Prisma User row. Pick a real `ADMIN_SEED_PASSWORD` in `.env` before this
+   (not the `admin123` default) if this is heading toward production.
 3. `npm run dev` and manually click through the real flow: register → login
    → upload a payment → (as admin) approve it → apply for an emergency loan →
    approve it → confirm the ledger and installment `loanDeduction` show up
-   correctly. This has only been verified at the "does it build" level, not
-   functionally against a live database yet.
-4. Bilingual Urdu/English + RTL UI — not started, do in a later pass.
-5. SMS provider for MemberID notification — stubbed behind
+   correctly. Schema + seed data are confirmed live now, but the full
+   request flow hasn't been exercised against real Firebase yet.
+4. Deploy to Vercel: import the GitHub repo, add every var from `.env`
+   (including the Neon ones now known-good) as Vercel Environment Variables,
+   deploy. `alqaim-fund.vercel.app`-style free domain, no cost — see the
+   free-tier notes earlier in this conversation history if picked back up.
+5. Bilingual Urdu/English + RTL UI — not started, do in a later pass.
+6. SMS provider for MemberID notification — stubbed behind
    `Settings.smsEnabled`, no provider wired up (`lib/notify.js`).
-6. Admin login currently uses `ADMIN_SEED_EMAIL` (default
+7. Admin login currently uses `ADMIN_SEED_EMAIL` (default
    `admin@alqaimfund.local`) as a placeholder Firebase email — fine as-is,
    just flagging it's synthetic, not a real inbox.
 
