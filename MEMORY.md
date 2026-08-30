@@ -38,11 +38,16 @@ C=5000/mo. Tenure default 12 months (admin-configurable). Loan eligible after
   makes painful. Use Neon's **pooled** connection string for `DATABASE_URL`
   (pgbouncer) and the **direct** connection string for `DIRECT_URL` (Prisma
   migrations need a direct, non-pooled connection).
-- **File storage:** **Firebase Storage** for payment-proof screenshots and
-  loan/emergency supporting documents (death certificate, hospital receipt,
-  etc). Client uploads directly to Storage from the browser, then sends the
-  resulting download URL to our API — Vercel functions have no persistent disk,
-  so we never handle multipart uploads server-side.
+- **File storage:** **Cloudinary** (unsigned upload preset), NOT Firebase
+  Storage — Firebase Storage started requiring the paid Blaze plan for new
+  buckets in Oct 2024, and the user wants everything free with no card on
+  file. Client uploads directly to Cloudinary from the browser via
+  `lib/cloudinary.js`'s `uploadToCloudinary(file, folder)`, gets back a
+  `secure_url`, and only that URL is sent to our API — Vercel functions have
+  no persistent disk, so we never handle multipart uploads server-side.
+  Firebase is Auth-only now (`lib/firebaseClient.js` no longer exports
+  `firebaseStorage`). Three things get uploaded: payment-proof screenshots,
+  loan/emergency supporting documents, and member profile pictures.
 - **users table** stores `firebaseUid` (link to Firebase user) instead of a
   password hash — Firebase owns credentials entirely.
 
@@ -142,8 +147,9 @@ Everything for a working v1 has been scaffolded:
   now in `.gitignore` (the Neon CLI added them itself, don't remove).
 - **This app only uses Neon for Lakebase Postgres** — no Neon Auth, Object
   Storage, Functions, or AI Gateway. Auth is Firebase, file storage is
-  Firebase Storage (see architecture decision above). Don't wire up the
-  other Neon services unless the user explicitly asks to move off Firebase.
+  Cloudinary (see architecture decision above, updated after this was
+  originally written). Don't wire up the other Neon services unless the
+  user explicitly asks to move off this stack.
 - `.env` (real, gitignored) now has real values for `DATABASE_URL` (Neon's
   pooled URL, `-pooler` host, with `&pgbouncer=true&connection_limit=1`
   appended — Neon's pulled value doesn't include those Prisma-recommended
@@ -157,23 +163,56 @@ Everything for a working v1 has been scaffolded:
 - `npm run seed:admin` has **not** been run yet — it needs real Firebase
   Admin credentials, which aren't in `.env` yet.
 
+## Status: Cloudinary is live, profile pictures added
+
+- Real Cloudinary account: cloud name `dyxs21tzy`, unsigned upload preset
+  named **`alqaim proofs`** (literally has a space in it — that's the real
+  name, verified by test-uploading a 1x1 PNG via curl before trusting it).
+  Both are in `.env` as `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` /
+  `NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET`.
+- `lib/cloudinary.js` — `uploadToCloudinary(file, folder)`, posts to
+  `https://api.cloudinary.com/v1_1/<cloud>/auto/upload` with the unsigned
+  preset, returns `secure_url`. Used by `app/member/payments`,
+  `app/member/loan`, and `app/member/profile` (photo upload).
+- `lib/firebaseClient.js` no longer touches Storage — Auth only now, and
+  initialization is guarded with `typeof window !== "undefined"` (see bug
+  fix below).
+- Added `User.photoUrl` to the schema (migration
+  `20260830205153_add_user_photo_url`, already applied to the real Neon DB)
+  — a member's profile picture, set from `/member/profile`, shown on the
+  member dashboard header, the admin members list (small avatar per row),
+  and each member's admin ledger page (`/admin/members/[id]`).
+- Fixed a second eager-init build bug, same class as the `firebaseAdmin.js`
+  one from earlier: `lib/firebaseClient.js`'s `getAuth(firebaseApp)` ran at
+  module-import time, and Next prerenders "use client" pages on the server
+  too (no real browser, and Firebase env vars are still empty at this
+  point) — `auth/invalid-api-key` was crashing every single page's build.
+  Fixed by only constructing `firebaseApp`/`firebaseAuth` when
+  `typeof window !== "undefined"`; both are `undefined` during server-side
+  prerendering, which is safe because every real usage happens inside
+  `useEffect` or event handlers, never during the render pass itself.
+  Rebuilt clean afterward (all 33 routes) — confirms this is a genuinely
+  fixed bug, not just "should be fine."
+
 ## Status: WHAT'S NEXT
 
-1. Get Firebase project set up (Auth: Email/Password enabled, Storage
-   enabled) and fill in the `NEXT_PUBLIC_FIREBASE_*` + `FIREBASE_ADMIN_*`
-   vars in `.env`.
+1. Get Firebase project set up (Auth: Email/Password enabled — do NOT
+   enable Storage, we're on Cloudinary for files) and fill in the
+   `NEXT_PUBLIC_FIREBASE_*` + `FIREBASE_ADMIN_*` vars in `.env`. This is the
+   one remaining piece blocking `npm run seed:admin` and any real
+   login/register test.
 2. `npm run seed:admin` — creates the Firebase admin user + custom claim +
    Prisma User row. Pick a real `ADMIN_SEED_PASSWORD` in `.env` before this
    (not the `admin123` default) if this is heading toward production.
 3. `npm run dev` and manually click through the real flow: register → login
-   → upload a payment → (as admin) approve it → apply for an emergency loan →
-   approve it → confirm the ledger and installment `loanDeduction` show up
-   correctly. Schema + seed data are confirmed live now, but the full
-   request flow hasn't been exercised against real Firebase yet.
+   → upload a payment (and a profile picture) → (as admin) approve it →
+   apply for an emergency loan → approve it → confirm the ledger and
+   installment `loanDeduction` show up correctly. Schema + seed data +
+   Cloudinary uploads are confirmed live now, but the full request flow
+   hasn't been exercised against real Firebase Auth yet.
 4. Deploy to Vercel: import the GitHub repo, add every var from `.env`
-   (including the Neon ones now known-good) as Vercel Environment Variables,
-   deploy. `alqaim-fund.vercel.app`-style free domain, no cost — see the
-   free-tier notes earlier in this conversation history if picked back up.
+   (Neon + Cloudinary are known-good now, Firebase still pending) as Vercel
+   Environment Variables, deploy. Free `*.vercel.app` domain, no cost.
 5. Bilingual Urdu/English + RTL UI — not started, do in a later pass.
 6. SMS provider for MemberID notification — stubbed behind
    `Settings.smsEnabled`, no provider wired up (`lib/notify.js`).

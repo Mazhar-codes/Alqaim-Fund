@@ -92,6 +92,7 @@ model User {
   phone            String
   email            String     @unique
   address          String?
+  photoUrl         String? // profile picture, uploaded to Cloudinary — visible to the member and to admin
   planId           Int? // null for admin accounts, required for members
   joinDate         DateTime   @default(now())
   status           UserStatus @default(ACTIVE)

@@ -26,9 +26,18 @@ function DashboardContent() {
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
-      <h1 className="text-2xl font-bold">
-        Welcome, {overview.member.name} <span className="text-gray-400">({overview.member.memberId})</span>
-      </h1>
+      <div className="flex items-center gap-3">
+        {overview.member.photoUrl ? (
+          <img src={overview.member.photoUrl} alt="" className="h-12 w-12 rounded-full object-cover" />
+        ) : (
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 text-lg font-semibold text-gray-400">
+            {overview.member.name?.[0]?.toUpperCase() || "?"}
+          </div>
+        )}
+        <h1 className="text-2xl font-bold">
+          Welcome, {overview.member.name} <span className="text-gray-400">({overview.member.memberId})</span>
+        </h1>
+      </div>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <Stat label="Plan" value={`${overview.plan.name} (Rs. ${Number(overview.plan.monthlyAmount).toLocaleString()}/mo)`} />

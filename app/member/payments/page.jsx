@@ -1,15 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Navbar from "@/components/Navbar";
 import StatusBadge from "@/components/StatusBadge";
 import { useAuth } from "@/context/AuthContext";
-import { firebaseStorage } from "@/lib/firebaseClient";
+import { uploadToCloudinary } from "@/lib/cloudinary";
 
 function PaymentsContent() {
-  const { authedFetch, firebaseUser } = useAuth();
+  const { authedFetch } = useAuth();
   const [payments, setPayments] = useState([]);
   const [form, setForm] = useState({ amount: "", paymentDate: "", transactionId: "" });
   const [file, setFile] = useState(null);
@@ -31,10 +30,7 @@ function PaymentsContent() {
     try {
       if (!file) throw new Error("Please attach a screenshot of the payment");
 
-      const path = `payment_proofs/${firebaseUser.uid}/${Date.now()}-${file.name}`;
-      const storageRef = ref(firebaseStorage, path);
-      await uploadBytes(storageRef, file);
-      const proofUrl = await getDownloadURL(storageRef);
+      const proofUrl = await uploadToCloudinary(file, "payment_proofs");
 
       const res = await authedFetch("/api/member/payments", {
         method: "POST",

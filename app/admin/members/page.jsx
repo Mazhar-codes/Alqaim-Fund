@@ -46,6 +46,7 @@ function MembersContent() {
         <table className="w-full text-left text-sm">
           <thead className="bg-gray-50 text-gray-600">
             <tr>
+              <th className="px-4 py-2"></th>
               <th className="px-4 py-2">Member ID</th>
               <th className="px-4 py-2">Name</th>
               <th className="px-4 py-2">Plan</th>
@@ -58,6 +59,15 @@ function MembersContent() {
           <tbody>
             {members.map((m) => (
               <tr key={m.id} className="border-t">
+                <td className="px-4 py-2">
+                  {m.photoUrl ? (
+                    <img src={m.photoUrl} alt="" className="h-8 w-8 rounded-full object-cover" />
+                  ) : (
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-xs font-semibold text-gray-400">
+                      {m.name?.[0]?.toUpperCase() || "?"}
+                    </div>
+                  )}
+                </td>
                 <td className="px-4 py-2 font-mono">{m.memberId}</td>
                 <td className="px-4 py-2">{m.name}</td>
                 <td className="px-4 py-2">{m.plan.name}</td>
@@ -73,7 +83,7 @@ function MembersContent() {
             ))}
             {members.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-6 text-center text-gray-400">No members found</td>
+                <td colSpan={8} className="px-4 py-6 text-center text-gray-400">No members found</td>
               </tr>
             )}
           </tbody>

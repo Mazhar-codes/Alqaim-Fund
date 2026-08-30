@@ -5,6 +5,7 @@ import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Navbar from "@/components/Navbar";
 import { useAuth } from "@/context/AuthContext";
+import { uploadToCloudinary } from "@/lib/cloudinary";
 
 function ProfileContent() {
   const { authedFetch, firebaseUser } = useAuth();
@@ -13,6 +14,7 @@ function ProfileContent() {
   const [pwForm, setPwForm] = useState({ current: "", next: "" });
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   useEffect(() => {
     authedFetch("/api/member/profile").then((d) => {
@@ -31,6 +33,24 @@ function ProfileContent() {
       setMessage("Profile updated.");
     } catch (err) {
       setError(err.message);
+    }
+  }
+
+  async function handlePhotoChange(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setError("");
+    setMessage("");
+    setUploadingPhoto(true);
+    try {
+      const photoUrl = await uploadToCloudinary(file, "profile_photos");
+      const res = await authedFetch("/api/member/profile", { method: "PATCH", body: JSON.stringify({ photoUrl }) });
+      setProfile(res.profile);
+      setMessage("Profile picture updated.");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setUploadingPhoto(false);
     }
   }
 
@@ -60,6 +80,24 @@ function ProfileContent() {
 
       {message && <p className="mt-4 text-sm text-green-700">{message}</p>}
       {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
+
+      <div className="mt-6 flex items-center gap-4 rounded-xl border bg-white p-5">
+        {profile.photoUrl ? (
+          <img src={profile.photoUrl} alt="" className="h-20 w-20 rounded-full object-cover" />
+        ) : (
+          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gray-100 text-2xl font-semibold text-gray-400">
+            {profile.name?.[0]?.toUpperCase() || "?"}
+          </div>
+        )}
+        <div>
+          <p className="font-semibold">Profile Picture</p>
+          <p className="text-sm text-gray-500">Visible to you and to admin on your member ledger.</p>
+          <label className="mt-2 inline-block cursor-pointer rounded-lg border px-3 py-1.5 text-sm hover:bg-gray-50">
+            {uploadingPhoto ? "Uploading…" : "Change Photo"}
+            <input type="file" accept="image/*" onChange={handlePhotoChange} disabled={uploadingPhoto} className="hidden" />
+          </label>
+        </div>
+      </div>
 
       <form onSubmit={saveProfile} className="mt-6 space-y-4 rounded-xl border bg-white p-5">
         <h2 className="font-semibold">Contact Details</h2>

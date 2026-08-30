@@ -20,8 +20,9 @@ read that first if you're picking this project back up.
   UI presents it as "MemberID + password"). Custom claim `role: "admin"`
   marks admins.
 - **Postgres on Neon** (Vercel's native Postgres integration) via **Prisma**.
-- **Firebase Storage** for payment-proof screenshots and loan/emergency
-  supporting documents.
+- **Cloudinary** (unsigned upload preset) for payment-proof screenshots,
+  loan/emergency supporting documents, and member profile pictures — not
+  Firebase Storage, which now requires the paid Blaze plan.
 
 ## Setup
 
@@ -35,29 +36,37 @@ read that first if you're picking this project back up.
    **pooled** connection string and the **direct** (unpooled) one.
 
 3. **Create a Firebase project** (console.firebase.google.com):
-   - Enable **Authentication → Email/Password**.
-   - Enable **Storage**.
+   - Enable **Authentication → Email/Password**. (Don't enable Storage — see
+     Cloudinary below instead.)
    - Grab the web app config (Project settings → General → Your apps) for
      the `NEXT_PUBLIC_FIREBASE_*` values.
    - Generate a service account key (Project settings → Service accounts →
      Generate new private key) for the `FIREBASE_ADMIN_*` values.
 
-4. **Copy `.env.example` to `.env`** and fill in the Neon + Firebase values.
+4. **Create a Cloudinary account** (cloudinary.com, free, no card needed):
+   - Copy the **Cloud name** from the dashboard home page.
+   - Settings → Upload → Upload presets → Add upload preset → set **Signing
+     Mode** to **Unsigned** → save, note its name.
+   - These become `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` and
+     `NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET`.
 
-5. **Push the schema and seed the plans**
+5. **Copy `.env.example` to `.env`** and fill in the Neon + Firebase +
+   Cloudinary values.
+
+6. **Push the schema and seed the plans**
    ```
    npx prisma migrate dev --name init
    npm run prisma:seed
    ```
 
-6. **Create the admin account** (reads `ADMIN_SEED_*` from `.env`):
+7. **Create the admin account** (reads `ADMIN_SEED_*` from `.env`):
    ```
    npm run seed:admin
    ```
    Default: username `admin`, password `admin123` — **change
    `ADMIN_SEED_PASSWORD` before running this against a real deployment.**
 
-7. **Run locally**
+8. **Run locally**
    ```
    npm run dev
    ```
@@ -100,6 +109,10 @@ read that first if you're picking this project back up.
   is in the current month, it's auto-approved. Otherwise it's queued for
   admin review (`/admin/payments`). Admin can also record a cash payment
   directly ("Add Payment Manually").
+- Members can upload a profile picture (`/member/profile`), visible to the
+  member and to admin (member dashboard header, admin member list and each
+  member's ledger page). Uploaded straight to Cloudinary from the browser —
+  see `lib/cloudinary.js`.
 
 ## API endpoints
 

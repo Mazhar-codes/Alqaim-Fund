@@ -15,7 +15,9 @@ export async function GET(request) {
 }
 
 /**
- * Body: { phone?, address? }
+ * Body: { phone?, address?, photoUrl? }
+ * photoUrl is a Cloudinary secure_url — the client uploads the picture
+ * directly to Cloudinary and only sends us the resulting URL.
  * Password changes go through Firebase client SDK directly
  * (reauthenticateWithCredential + updatePassword) — this endpoint never
  * touches credentials.
@@ -23,13 +25,14 @@ export async function GET(request) {
 export async function PATCH(request) {
   try {
     const { user } = await requireUser(request);
-    const { phone, address } = await request.json();
+    const { phone, address, photoUrl } = await request.json();
 
     const updated = await prisma.user.update({
       where: { id: user.id },
       data: {
         ...(phone && { phone }),
         ...(address !== undefined && { address }),
+        ...(photoUrl !== undefined && { photoUrl }),
       },
     });
 

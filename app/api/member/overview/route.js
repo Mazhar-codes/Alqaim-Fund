@@ -23,6 +23,7 @@ export async function GET(request) {
         name: user.name,
         status: user.status,
         joinDate: user.joinDate,
+        photoUrl: user.photoUrl,
       },
       plan: { name: plan.name, code: plan.code, monthlyAmount: plan.monthlyAmount, tenureMonths: plan.tenureMonths },
       totalPaid: user.totalPaid,

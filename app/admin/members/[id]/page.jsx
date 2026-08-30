@@ -44,11 +44,20 @@ function MemberLedgerContent() {
   return (
     <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
       <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">{member.name} <span className="font-mono text-gray-400">({member.memberId})</span></h1>
-          <p className="mt-1 text-sm text-gray-500">
-            {member.plan.name} · {member.cnic} · {member.phone} · {member.email}
-          </p>
+        <div className="flex items-center gap-4">
+          {member.photoUrl ? (
+            <img src={member.photoUrl} alt="" className="h-16 w-16 rounded-full object-cover" />
+          ) : (
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 text-xl font-semibold text-gray-400">
+              {member.name?.[0]?.toUpperCase() || "?"}
+            </div>
+          )}
+          <div>
+            <h1 className="text-2xl font-bold">{member.name} <span className="font-mono text-gray-400">({member.memberId})</span></h1>
+            <p className="mt-1 text-sm text-gray-500">
+              {member.plan.name} · {member.cnic} · {member.phone} · {member.email}
+            </p>
+          </div>
         </div>
         <div className="text-right">
           <StatusBadge status={member.status} />

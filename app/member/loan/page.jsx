@@ -1,15 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Navbar from "@/components/Navbar";
 import StatusBadge from "@/components/StatusBadge";
 import { useAuth } from "@/context/AuthContext";
-import { firebaseStorage } from "@/lib/firebaseClient";
+import { uploadToCloudinary } from "@/lib/cloudinary";
 
 function LoanContent() {
-  const { authedFetch, firebaseUser } = useAuth();
+  const { authedFetch } = useAuth();
   const [data, setData] = useState(null);
   const [form, setForm] = useState({ amount: "", reasonCategory: "", description: "" });
   const [file, setFile] = useState(null);
@@ -31,10 +30,7 @@ function LoanContent() {
     try {
       let proofUrl = null;
       if (file) {
-        const path = `loan_proofs/${firebaseUser.uid}/${Date.now()}-${file.name}`;
-        const storageRef = ref(firebaseStorage, path);
-        await uploadBytes(storageRef, file);
-        proofUrl = await getDownloadURL(storageRef);
+        proofUrl = await uploadToCloudinary(file, "loan_proofs");
       }
 
       const res = await authedFetch("/api/member/loan", {
