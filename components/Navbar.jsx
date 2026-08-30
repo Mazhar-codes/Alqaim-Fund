@@ -17,8 +17,11 @@ import {
   LogOut,
   Menu,
   X,
+  Home,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+
+const PUBLIC_LINKS = [{ href: "/", label: "Home", icon: Home }];
 
 const MEMBER_LINKS = [
   { href: "/member/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -41,7 +44,7 @@ export default function Navbar({ variant = "public" }) {
   const { firebaseUser, signOut } = useAuth();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const links = variant === "member" ? MEMBER_LINKS : variant === "admin" ? ADMIN_LINKS : [];
+  const links = variant === "member" ? MEMBER_LINKS : variant === "admin" ? ADMIN_LINKS : PUBLIC_LINKS;
 
   return (
     <nav className="sticky top-0 z-40 border-b border-gray-200/80 bg-white/80 backdrop-blur-md">

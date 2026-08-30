@@ -7,6 +7,7 @@ import { PartyPopper, UserPlus, AlertCircle } from "lucide-react";
 import { firebaseAuth } from "@/lib/firebaseClient";
 import Navbar from "@/components/Navbar";
 import Button from "@/components/Button";
+import { formatCnic, isGmailAddress } from "@/lib/validators";
 
 function RegisterForm() {
   const router = useRouter();
@@ -39,6 +40,10 @@ function RegisterForm() {
     return (e) => setForm((f) => ({ ...f, [field]: e.target.value }));
   }
 
+  function updateCnic(e) {
+    setForm((f) => ({ ...f, cnic: formatCnic(e.target.value) }));
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
@@ -46,6 +51,9 @@ function RegisterForm() {
     try {
       if (!/^\d{5}-\d{7}-\d{1}$/.test(form.cnic)) {
         throw new Error("CNIC must be in the format 42101-1234567-1");
+      }
+      if (!isGmailAddress(form.email)) {
+        throw new Error("Only Gmail addresses (@gmail.com) can register");
       }
       if (!form.planId) throw new Error("Please select a plan");
 
@@ -111,10 +119,25 @@ function RegisterForm() {
 
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
             <Field label="Full Name" value={form.name} onChange={update("name")} required />
-            <Field label="CNIC (42101-1234567-1)" value={form.cnic} onChange={update("cnic")} required />
+            <Field
+              label="CNIC"
+              value={form.cnic}
+              onChange={updateCnic}
+              placeholder="42101-1234567-1"
+              inputMode="numeric"
+              maxLength={15}
+              required
+            />
             <Field label="Phone" value={form.phone} onChange={update("phone")} required />
             <Field label="Address" value={form.address} onChange={update("address")} />
-            <Field label="Email" type="email" value={form.email} onChange={update("email")} required />
+            <Field
+              label="Email (Gmail only)"
+              type="email"
+              value={form.email}
+              onChange={update("email")}
+              placeholder="you@gmail.com"
+              required
+            />
             <Field label="Password" type="password" value={form.password} onChange={update("password")} required minLength={6} />
 
             <div>

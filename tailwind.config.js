@@ -55,6 +55,10 @@ module.exports = {
           "0%": { backgroundPosition: "-200% 0" },
           "100%": { backgroundPosition: "200% 0" },
         },
+        float: {
+          "0%, 100%": { transform: "translateY(0) rotate(var(--float-rot, -3deg))" },
+          "50%": { transform: "translateY(-14px) rotate(var(--float-rot, -3deg))" },
+        },
       },
       animation: {
         "fade-in-up": "fade-in-up 0.6s ease-out both",
@@ -62,6 +66,7 @@ module.exports = {
         blob: "blob 12s infinite ease-in-out",
         "scale-in": "scale-in 0.15s ease-out both",
         shimmer: "shimmer 1.6s infinite linear",
+        float: "float 5s ease-in-out infinite",
       },
     },
   },

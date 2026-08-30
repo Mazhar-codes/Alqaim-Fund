@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { getAdminAuth } from "@/lib/firebaseAdmin";
 import { prisma } from "@/lib/prisma";
-import { generateNextMemberId, isValidCnic } from "@/lib/memberId";
+import { generateNextMemberId } from "@/lib/memberId";
+import { isValidCnic, isGmailAddress } from "@/lib/validators";
 import { buildInstallmentSchedule } from "@/lib/dueDate";
 import { notifyMemberId } from "@/lib/notify";
 
@@ -32,6 +33,9 @@ export async function POST(request) {
   }
   if (!decoded.email) {
     return NextResponse.json({ error: "Firebase account has no email on file" }, { status: 400 });
+  }
+  if (!isGmailAddress(decoded.email)) {
+    return NextResponse.json({ error: "Only Gmail addresses (@gmail.com) can register" }, { status: 400 });
   }
 
   const existing = await prisma.user.findUnique({ where: { firebaseUid: decoded.uid } });

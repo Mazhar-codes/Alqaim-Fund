@@ -16,7 +16,7 @@ async function main() {
   await prisma.settings.upsert({
     where: { id: 1 },
     update: {},
-    create: { id: 1, defaultTenureMonths: 12, minInstallmentsForLoan: 3, smsEnabled: false },
+    create: { id: 1, defaultTenureMonths: 12, minInstallmentsForLoan: 12, smsEnabled: false },
   });
 
   console.log("Seeded plans A/B/C and default settings.");

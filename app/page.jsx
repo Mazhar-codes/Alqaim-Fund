@@ -15,6 +15,7 @@ import {
 import Navbar from "@/components/Navbar";
 import PlanCard from "@/components/PlanCard";
 import Reveal from "@/components/Reveal";
+import TiltCard from "@/components/TiltCard";
 
 const STEPS = [
   {
@@ -25,7 +26,7 @@ const STEPS = [
   {
     icon: FileCheck2,
     title: "2. Build eligibility",
-    body: "After 3 paid installments you're eligible to request emergency support if you ever need it.",
+    body: "After completing your full 12-month cycle you're eligible to request emergency support if you ever need it.",
   },
   {
     icon: Banknote,
@@ -72,6 +73,44 @@ export default function Landing() {
             <div className="absolute -top-24 left-1/4 h-72 w-72 rounded-full bg-brand-300/30 blur-3xl animate-blob" />
             <div className="absolute top-10 right-1/4 h-72 w-72 rounded-full bg-accent-400/20 blur-3xl animate-blob animation-delay-2000" />
             <div className="absolute bottom-0 left-1/3 h-72 w-72 rounded-full bg-purple-300/20 blur-3xl animate-blob animation-delay-4000" />
+          </div>
+
+          {/* Decorative floating 3D badges — purely visual, hidden on small screens to avoid clutter */}
+          <div
+            className="pointer-events-none absolute left-[6%] top-28 hidden animate-float items-center gap-2 rounded-2xl border border-gray-200/80 bg-white/90 px-4 py-3 shadow-xl backdrop-blur lg:flex"
+            style={{ "--float-rot": "-6deg" }}
+          >
+            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-green-100 text-green-600">
+              <ShieldCheck className="h-4.5 w-4.5" />
+            </span>
+            <div className="text-left">
+              <p className="text-xs text-gray-400">No Interest</p>
+              <p className="text-sm font-semibold text-gray-800">Rs. 100,000 in, Rs. 100,000 out</p>
+            </div>
+          </div>
+          <div
+            className="pointer-events-none absolute right-[6%] bottom-8 hidden animate-float items-center gap-2 rounded-2xl border border-gray-200/80 bg-white/90 px-4 py-3 shadow-xl backdrop-blur lg:flex"
+            style={{ "--float-rot": "5deg", animationDelay: "1.2s" }}
+          >
+            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-100 text-amber-600">
+              <HeartHandshake className="h-4.5 w-4.5" />
+            </span>
+            <div className="text-left">
+              <p className="text-xs text-gray-400">Emergency Fund</p>
+              <p className="text-sm font-semibold text-gray-800">Admin-approved & released</p>
+            </div>
+          </div>
+          <div
+            className="pointer-events-none absolute left-[12%] bottom-4 hidden animate-float items-center gap-2 rounded-2xl border border-gray-200/80 bg-white/90 px-4 py-3 shadow-xl backdrop-blur lg:flex"
+            style={{ "--float-rot": "-4deg", animationDelay: "2.4s" }}
+          >
+            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-100 text-brand-600">
+              <Wallet className="h-4.5 w-4.5" />
+            </span>
+            <div className="text-left">
+              <p className="text-xs text-gray-400">Every Rupee Tracked</p>
+              <p className="text-sm font-semibold text-gray-800">Full IN/OUT ledger</p>
+            </div>
           </div>
 
           <div className="mx-auto max-w-4xl text-center">
@@ -157,16 +196,16 @@ export default function Landing() {
         <section className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
           <div className="grid gap-6 sm:grid-cols-3">
             {FEATURES.map(({ icon: Icon, title, body }, i) => (
-              <Reveal
-                key={title}
-                delay={i * 120}
-                className="group rounded-2xl border border-gray-200 bg-white p-6 transition-all duration-300 hover:-translate-y-1 hover:border-brand-200 hover:shadow-lg"
-              >
-                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-50 text-brand-700 transition-colors group-hover:bg-brand-600 group-hover:text-white">
-                  <Icon className="h-5 w-5" />
-                </span>
-                <h3 className="mt-4 font-semibold text-gray-900">{title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-gray-600">{body}</p>
+              <Reveal key={title} delay={i * 120}>
+                <TiltCard max={6}>
+                  <div className="group h-full rounded-2xl border border-gray-200 bg-white p-6 transition-shadow duration-300 hover:border-brand-200 hover:shadow-lg">
+                    <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-50 text-brand-700 transition-colors group-hover:bg-brand-600 group-hover:text-white">
+                      <Icon className="h-5 w-5" />
+                    </span>
+                    <h3 className="mt-4 font-semibold text-gray-900">{title}</h3>
+                    <p className="mt-2 text-sm leading-relaxed text-gray-600">{body}</p>
+                  </div>
+                </TiltCard>
               </Reveal>
             ))}
           </div>

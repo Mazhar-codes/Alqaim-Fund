@@ -16,8 +16,13 @@ verification queue, loan/emergency approval queue, reports.
 
 Full original spec (plans, tenure, loan formula, roles, pages) was given by the
 user in chat — not duplicated here. Key numbers: Plan A=2000/mo, B=3000/mo,
-C=5000/mo. Tenure default 12 months (admin-configurable). Loan eligible after
->=3 paid installments. Max loan = plan monthly amount x 20. No interest, ever.
+C=5000/mo. Tenure default 12 months (admin-configurable). Loan eligible only
+after completing the full 12-month cycle (>=12 paid installments — changed
+from the original spec's "3 installments" per explicit user request in a
+later session; see `Settings.minInstallmentsForLoan`, still admin-configurable).
+Max loan = plan monthly amount x 20. No interest, ever. Registration is
+Gmail-only (`@gmail.com`), CNIC auto-formats with dashes as typed, admin can
+permanently delete a member account (cascades all their records).
 
 ## Architecture decision (locked in — do not re-litigate without asking user)
 
@@ -318,23 +323,84 @@ functional. Did a full design pass, not just a coat of paint:
   FileDropzone (uploaded a real file, confirmed the green "uploaded"
   state renders). Everything held up.
 
+## Status: Registration/eligibility/delete-account changes (this session)
+
+User asked, in one message: what were the admin credentials, auto-format
+CNIC dashes, Gmail-only registration, whether admin can delete an account,
+whether loan eligibility should be 12 months or admin-discretion-only, a
+mobile-friendly pass, a "Home" nav link (screenshot showed it missing on
+`/login`), and more landing-page interactivity/3D. Asked ONE clarifying
+question (loan eligibility, since it's a real money rule) via
+AskUserQuestion — answer: **require the full 12-month cycle**, not 3
+installments. Everything else was unambiguous enough to just implement.
+
+- `lib/validators.js` (new) — `isValidCnic` (moved out of `lib/memberId.js`),
+  `formatCnic` (auto-inserts dashes as the user types: `4210112345671` ->
+  `42101-1234567-1`), `isGmailAddress` (`@gmail.com` only, case-insensitive).
+  Used both client-side (`app/register/page.jsx`, instant feedback) and
+  server-side (`app/api/auth/register/route.js`, checks the Firebase-verified
+  `decoded.email`, not a client-supplied value — defense in depth).
+- **Loan eligibility raised from 3 to 12 installments**: schema default
+  changed (`Settings.minInstallmentsForLoan @default(12)`), `prisma/seed.js`
+  updated, AND the **live Settings row was manually UPDATEd** (schema
+  defaults only apply to new rows, not existing ones — ran
+  `UPDATE settings SET "minInstallmentsForLoan" = 12 WHERE id = 1` via Neon
+  psql). All hardcoded "3 paid installments" UI copy updated too
+  (`app/page.jsx`, `components/PlanCard.jsx`). Still admin-configurable via
+  `/admin/settings` if this needs to change again later.
+- **Admin can now permanently delete a member account** — `DELETE
+  /api/admin/members/[id]` (in `app/api/admin/members/[id]/route.js`):
+  deletes the Firebase Auth user, then the Prisma `User` row, which now
+  **cascades** (new migration `20260830225510_cascade_delete_member_data`
+  added `onDelete: Cascade` to every child relation — installments,
+  payments, loan requests, loan repayments, transactions — pointing back to
+  `User`). Guards: can't delete your own admin account, can't delete another
+  `ADMIN` role account from this screen. UI
+  (`app/admin/members/[id]/page.jsx`) requires typing the exact MemberID
+  into a `Modal` before the "Permanently Delete" button enables — tested
+  live end-to-end (created a throwaway member, deleted it, confirmed via a
+  direct DB query that the row and all its cascaded children were gone).
+- **"Home" link added** to `Navbar`'s public variant (`components/Navbar.jsx`
+  — new `PUBLIC_LINKS` array) — this is what was missing on `/login` in the
+  user's screenshot; now shows on every public-variant page including the
+  landing page itself.
+- **3D/interactive landing page additions**: `components/TiltCard.jsx` (pure
+  CSS mouse-tracking 3D tilt via `perspective`/`rotateX`/`rotateY`, no
+  library) wraps `PlanCard` and the feature cards. Three decorative floating
+  "badge" cards added to the hero (`animate-float` keyframe in
+  `tailwind.config.js`, `hidden lg:flex` so they don't clutter mobile) —
+  had to reposition one of them mid-session because it initially overlapped
+  the hero heading text, caught by actually looking at the screenshot, not
+  assumed correct from the code.
+- **Mobile-responsive**: no NEW code changes beyond what redesign already
+  had (mobile-first Tailwind classes throughout, `lg:hidden` hamburger nav,
+  `overflow-x-auto` tables, decorative floats hidden below `lg:`). Could NOT
+  visually verify at a narrow viewport this session either — `resize_window`
+  still doesn't affect the automation screenshot's captured dimensions in
+  this environment (tried 4 times across two sessions now, always returns
+  1366px-wide screenshots regardless of requested size). Did a static grep
+  audit instead (no fixed-pixel-width containers found). **If revisiting:
+  don't retry resize_window — it's a confirmed environment limitation, not
+  worth more attempts. Verify mobile on an actual device/DevTools instead.**
+
 ## Status: WHAT'S NEXT
 
 1. Deploy to Vercel: import the GitHub repo, add every var from `.env`
    (Neon + Cloudinary + Firebase are ALL known-good now, verified live) as
    Vercel Environment Variables, deploy. Free `*.vercel.app` domain.
-2. Decide what to do with the test data (USR001 etc., plus a rejected
-   MODALTEST01 payment from this session's modal test) before real
-   launch — ask the user, don't just delete it.
+2. Decide what to do with accumulated test data (USR001, USR002 — the
+   latter looks like the user's own manual testing, garbage placeholder
+   name — plus a rejected MODALTEST01 payment) before real launch — ask
+   the user, don't just delete it. The admin delete-account feature built
+   this session makes this easy to do from the UI whenever they're ready.
 3. Bilingual Urdu/English + RTL UI — not started, do in a later pass.
 4. SMS provider for MemberID notification — stubbed behind
    `Settings.smsEnabled`, no provider wired up (`lib/notify.js`).
 5. Admin login currently uses `ADMIN_SEED_EMAIL` (default
    `admin@alqaimfund.local`) as a placeholder Firebase email — fine as-is,
    just flagging it's synthetic, not a real inbox.
-6. Mobile-viewport nav wasn't visually re-verified this session (tooling
-   limitation, see above) — worth a real phone/devtools check before
-   calling the redesign fully done.
+6. Real mobile-viewport check (phone or browser DevTools, not this
+   automation environment) still outstanding — see note above.
 
 ## Known rough edges / things to double check when revisiting
 
@@ -349,3 +415,9 @@ functional. Did a full design pass, not just a coat of paint:
   `.next` directory corrupts the dev server's cache (`Cannot find module
   './276.js'` style errors) — always stop the dev server first, or use a
   separate working copy, before running a production build for verification.
+  This happened again this session (twice) — killing stray `node.exe`
+  processes matching `*Alqaim Fund*` in their command line cleans it up;
+  `TaskStop` on the harness-tracked task doesn't always kill the actual
+  underlying `next dev` process tree on Windows, so stray processes can pile
+  up across sessions — worth a quick `Get-CimInstance Win32_Process` check
+  at the start of any session that's about to run `next dev`.

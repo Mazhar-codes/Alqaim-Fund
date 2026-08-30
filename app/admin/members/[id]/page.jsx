@@ -1,12 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
-import { ListChecks, PiggyBank, CalendarDays, ShieldOff, ShieldCheck, ArrowDownCircle, ArrowUpCircle } from "lucide-react";
+import { useParams, useRouter } from "next/navigation";
+import {
+  ListChecks,
+  PiggyBank,
+  CalendarDays,
+  ShieldOff,
+  ShieldCheck,
+  ArrowDownCircle,
+  ArrowUpCircle,
+  Trash2,
+} from "lucide-react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Navbar from "@/components/Navbar";
 import StatusBadge from "@/components/StatusBadge";
 import Button from "@/components/Button";
+import Modal from "@/components/Modal";
 import Reveal from "@/components/Reveal";
 import { useAuth } from "@/context/AuthContext";
 import { formatDate } from "@/lib/formatDate";
@@ -14,10 +24,15 @@ import { formatDate } from "@/lib/formatDate";
 function MemberLedgerContent() {
   const { authedFetch } = useAuth();
   const params = useParams();
+  const router = useRouter();
   const [member, setMember] = useState(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [toggling, setToggling] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
 
   function load() {
     authedFetch(`/api/admin/members/${params.id}`)
@@ -43,6 +58,19 @@ function MemberLedgerContent() {
       setError(err.message);
     } finally {
       setToggling(false);
+    }
+  }
+
+  async function deleteMember() {
+    setDeleteError("");
+    setDeleting(true);
+    try {
+      await authedFetch(`/api/admin/members/${params.id}`, { method: "DELETE" });
+      router.push("/admin/members");
+    } catch (err) {
+      setDeleteError(err.message);
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -80,15 +108,29 @@ function MemberLedgerContent() {
         </div>
         <div className="flex flex-col items-end gap-2">
           <StatusBadge status={member.status} />
-          <Button
-            variant={member.status === "SUSPENDED" ? "success" : "outline"}
-            size="sm"
-            icon={member.status === "SUSPENDED" ? ShieldCheck : ShieldOff}
-            loading={toggling}
-            onClick={toggleSuspend}
-          >
-            {member.status === "SUSPENDED" ? "Reactivate" : "Suspend"}
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant={member.status === "SUSPENDED" ? "success" : "outline"}
+              size="sm"
+              icon={member.status === "SUSPENDED" ? ShieldCheck : ShieldOff}
+              loading={toggling}
+              onClick={toggleSuspend}
+            >
+              {member.status === "SUSPENDED" ? "Reactivate" : "Suspend"}
+            </Button>
+            <Button
+              variant="danger"
+              size="sm"
+              icon={Trash2}
+              onClick={() => {
+                setDeleteConfirmText("");
+                setDeleteError("");
+                setDeleteOpen(true);
+              }}
+            >
+              Delete
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -149,6 +191,46 @@ function MemberLedgerContent() {
           }}
         />
       </Section>
+
+      <Modal
+        open={deleteOpen}
+        onClose={() => !deleting && setDeleteOpen(false)}
+        title="Delete member account"
+        footer={
+          <>
+            <Button variant="outline" size="sm" onClick={() => setDeleteOpen(false)} disabled={deleting}>
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              size="sm"
+              icon={Trash2}
+              loading={deleting}
+              disabled={deleteConfirmText !== member.memberId}
+              onClick={deleteMember}
+            >
+              Permanently Delete
+            </Button>
+          </>
+        }
+      >
+        <p className="text-sm text-gray-600">
+          This permanently deletes <span className="font-semibold text-gray-900">{member.name}</span>'s account,
+          login, and every installment, payment, loan, and transaction record. <span className="font-semibold text-red-600">
+            This cannot be undone.
+          </span>
+        </p>
+        <label className="mt-4 block text-sm font-medium text-gray-700">
+          Type <span className="font-mono">{member.memberId}</span> to confirm
+        </label>
+        <input
+          value={deleteConfirmText}
+          onChange={(e) => setDeleteConfirmText(e.target.value)}
+          placeholder={member.memberId}
+          className="mt-1 w-full rounded-lg border-gray-300 shadow-sm transition focus:border-red-500 focus:ring-red-500"
+        />
+        {deleteError && <p className="mt-2 text-sm text-red-600">{deleteError}</p>}
+      </Modal>
     </main>
   );
 }
