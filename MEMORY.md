@@ -431,12 +431,36 @@ completed the dashboard import) — ask before assuming it's live.
     support popup renders and translates, confirmed language persists
     across page navigation (localStorage).
 
+## Status: Vercel is live and verified (this session)
+
+Deployed at **https://alqaim-fund.vercel.app/** — user confirmed they did
+the import themselves. Ran a real smoke test against the production URL
+(not just assumed it worked because the user said so):
+- Landing page renders correctly, including the full redesign +
+  contact-support widget + Urdu toggle, and shows the current
+  "12-month cycle" copy — confirms Vercel is serving the latest deploy,
+  not a stale cached build.
+- Plans load from the live Neon DB via `/api/plans` (auto-deploy +
+  `prisma migrate deploy` in the build step both confirmed working).
+- Found the user's own real member account (USR002, logged in on
+  production already) — confirms Firebase Auth's authorized-domains step
+  was already done correctly (login would hard-fail with an
+  `auth/unauthorized-domain` error otherwise), and that registration works
+  live end-to-end, not just on localhost.
+- Logged into `/admin/login` with the real admin credentials, confirmed
+  `/admin` overview and `/admin/members` both show numbers that exactly
+  match what we verified earlier in the local/Neon testing (2 members,
+  Rs. 12,000 collected, 1 active loan, Rs. 16,000 outstanding) — this
+  confirms production and local dev are pointed at the **same** Neon
+  database (by design, not a bug — there's only one database for this
+  project). Logged back out afterward, made no data changes.
+- Did NOT test the full write-path (submit a real payment/loan on
+  production) to avoid adding more noise to real data — read-only checks
+  were sufficient to confirm the deployment is healthy.
+
 ## Status: WHAT'S NEXT
 
-1. **Confirm Vercel deployment status with the user** — they asked to
-   deploy but no confirmation was given that the dashboard import actually
-   happened. Don't assume it's live; ask.
-2. Decide what to do with accumulated test data (USR001, USR002 — the
+1. Decide what to do with accumulated test data (USR001, USR002 — the
    latter looks like the user's own manual testing, garbage placeholder
    name — plus a rejected MODALTEST01 payment) before real launch — ask
    the user, don't just delete it. The admin delete-account feature makes
