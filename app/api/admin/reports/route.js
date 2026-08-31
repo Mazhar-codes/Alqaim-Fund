@@ -25,18 +25,28 @@ export async function GET(request) {
         { header: "Member ID", key: "memberId", width: 14 },
         { header: "Name", key: "name", width: 24 },
         { header: "Installment #", key: "installmentNumber", width: 14 },
-        { header: "Plan Amount", key: "amount", width: 14 },
+        { header: "Plan Amount Due", key: "amount", width: 16 },
+        { header: "Amount Actually Paid", key: "amountPaid", width: 18 },
+        { header: "Shortfall", key: "shortfall", width: 14 },
         { header: "Loan Deduction", key: "loanDeduction", width: 16 },
         { header: "Paid Date", key: "paidDate", width: 14 },
       ];
-      rows = paid.map((i) => ({
-        memberId: i.user.memberId,
-        name: i.user.name,
-        installmentNumber: i.installmentNumber,
-        amount: Number(i.amount),
-        loanDeduction: Number(i.loanDeduction),
-        paidDate: i.paidDate?.toISOString().slice(0, 10),
-      }));
+      rows = paid.map((i) => {
+        // Older installments paid before amountPaid was tracked default to
+        // the due amount (they could only reach PAID via an exact match
+        // back then) — never fall back to it for anything recorded after.
+        const amountPaid = i.amountPaid != null ? Number(i.amountPaid) : Number(i.amount);
+        return {
+          memberId: i.user.memberId,
+          name: i.user.name,
+          installmentNumber: i.installmentNumber,
+          amount: Number(i.amount),
+          amountPaid,
+          shortfall: Number(i.amount) - amountPaid,
+          loanDeduction: Number(i.loanDeduction),
+          paidDate: i.paidDate?.toISOString().slice(0, 10),
+        };
+      });
     } else if (type === "defaulters") {
       const overdue = await prisma.installment.findMany({
         where: { status: "PENDING", dueDate: { lt: new Date() } },
