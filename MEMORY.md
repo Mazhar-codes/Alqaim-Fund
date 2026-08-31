@@ -515,6 +515,38 @@ same event (transaction id=7, installment id=13, member USR002).
   `prisma migrate deploy` automatically (idempotent, since the migration
   was already applied directly to the same Neon DB during this fix).
 
+**Follow-up (same session, caught by the user immediately after the first
+fix via a fresh screenshot):** the ledger row was fixed, but the admin
+overview's "Collection This Month" stat card and the collection Excel/JSON
+report still showed Rs. 3,000 — same root bug, two more places.
+`app/api/admin/stats/route.js` was summing `installment.amount` +
+`installment.loanDeduction` (scheduled amounts) instead of real money
+received; `app/api/admin/reports/route.js`'s "collection" report only had
+a "Plan Amount" column, no paid-amount column at all. Fixed both:
+- **Stats**: `collectionThisMonth` now sums the `Transaction` ledger
+  (`direction=OUT`, category `INSTALLMENT_PAYMENT`/`LOAN_REPAYMENT`, this
+  calendar month) — the ledger is the real source of truth for money
+  actually collected, and is correct post-fix.
+- **Report**: collection report/export now shows "Plan Amount Due",
+  "Amount Actually Paid", and "Shortfall" columns side by side.
+- **Backfill migration** (`20260831010442_backfill_installment_amount_paid`):
+  historical PAID installments had `amountPaid = NULL` (the field didn't
+  exist yet when they were paid) — backfilled by joining each installment
+  to its `INSTALLMENT_PAYMENT` transaction and copying that (now-correct)
+  amount across, so old data reports consistently too, not just new data.
+- Verified live: admin overview now shows Rs. 2,000 Collection This Month;
+  collection report shows Due 3000 / Paid 2000 / Shortfall 1000 for the
+  one real PAID installment in the DB (USR002, installment #1).
+- Committed (`c94a500`) and pushed.
+- **Lesson for next time**: when a "due vs. actually paid" bug is found in
+  one place, grep for every other place that reads `installment.amount`
+  or `installment.loanDeduction` as if it were the received amount — this
+  bug existed in three separate call sites (the ledger writer, the stats
+  aggregate, and the report) and was only caught in the second and third
+  because the user kept checking after the first fix, not because a
+  systematic sweep was done up front. Do the sweep up front next time a
+  similar bug class is found.
+
 ## Status: WHAT'S NEXT
 
 1. Decide what to do with accumulated test data (USR001, USR002 — the
