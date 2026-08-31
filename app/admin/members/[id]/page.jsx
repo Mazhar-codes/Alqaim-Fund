@@ -11,6 +11,7 @@ import {
   ArrowDownCircle,
   ArrowUpCircle,
   Trash2,
+  AlertTriangle,
 } from "lucide-react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Navbar from "@/components/Navbar";
@@ -145,11 +146,24 @@ function MemberLedgerContent() {
       <Section title="Installments">
         <Table
           rows={member.installments}
-          cols={["installmentNumber", "dueDate", "amount", "loanDeduction", "status"]}
+          cols={["installmentNumber", "dueDate", "amount", "loanDeduction", "amountPaid", "status"]}
           render={{
             dueDate: (v) => formatDate(v),
             amount: (v) => `Rs. ${Number(v).toLocaleString()}`,
             loanDeduction: (v) => (Number(v) > 0 ? `Rs. ${Number(v).toLocaleString()}` : "—"),
+            amountPaid: (v, row) => {
+              if (v == null) return "—";
+              const short = Number(row.amount) - Number(v);
+              if (short > 0.01) {
+                return (
+                  <span className="inline-flex items-center gap-1 font-medium text-amber-700">
+                    <AlertTriangle className="h-3.5 w-3.5" />
+                    Rs. {Number(v).toLocaleString()} (Rs. {short.toLocaleString()} short)
+                  </span>
+                );
+              }
+              return `Rs. ${Number(v).toLocaleString()}`;
+            },
             status: (v) => <StatusBadge status={v} />,
           }}
         />
@@ -273,7 +287,7 @@ function Table({ rows, cols, render = {} }) {
           {rows.map((row, idx) => (
             <tr key={row.id ?? idx} className="border-t transition-colors hover:bg-gray-50">
               {cols.map((c) => (
-                <td key={c} className="px-4 py-2">{render[c] ? render[c](row[c]) : row[c] ?? "—"}</td>
+                <td key={c} className="px-4 py-2">{render[c] ? render[c](row[c], row) : row[c] ?? "—"}</td>
               ))}
             </tr>
           ))}

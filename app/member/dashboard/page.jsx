@@ -7,6 +7,7 @@ import {
   CalendarClock,
   ListChecks,
   HeartHandshake,
+  AlertTriangle,
 } from "lucide-react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Navbar from "@/components/Navbar";
@@ -105,7 +106,15 @@ function DashboardContent() {
               <tr key={i.id} className="border-t transition-colors hover:bg-gray-50">
                 <td className="px-4 py-2">{i.installmentNumber}</td>
                 <td className="px-4 py-2">{formatDate(i.dueDate)}</td>
-                <td className="px-4 py-2">Rs. {Number(i.amount).toLocaleString()}</td>
+                <td className="px-4 py-2">
+                  Rs. {Number(i.amount).toLocaleString()}
+                  {i.amountPaid != null && Number(i.amount) - Number(i.amountPaid) > 0.01 && (
+                    <span className="mt-0.5 flex items-center gap-1 text-xs font-medium text-amber-700">
+                      <AlertTriangle className="h-3 w-3" />
+                      Only Rs. {Number(i.amountPaid).toLocaleString()} received
+                    </span>
+                  )}
+                </td>
                 <td className="px-4 py-2">
                   {Number(i.loanDeduction) > 0 ? `Rs. ${Number(i.loanDeduction).toLocaleString()}` : "—"}
                 </td>

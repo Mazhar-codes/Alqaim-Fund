@@ -1,12 +1,25 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin, AuthError } from "@/lib/auth";
-import { applyApprovedPayment } from "@/lib/payments";
+import { applyApprovedPayment, getDueAmount } from "@/lib/payments";
 
-/** GET /api/admin/payments?status=PENDING (default) | APPROVED | REJECTED | ALL */
+/**
+ * GET /api/admin/payments?status=PENDING (default) | APPROVED | REJECTED | ALL
+ * GET /api/admin/payments?memberId=USR001 — looks up what's currently due for
+ * one member, used by the "Add Payment Manually" form to warn on mismatch.
+ */
 export async function GET(request) {
   try {
     await requireAdmin(request);
+
+    const memberId = request.nextUrl.searchParams.get("memberId");
+    if (memberId) {
+      const member = await prisma.user.findUnique({ where: { memberId }, select: { id: true, name: true } });
+      if (!member) return NextResponse.json({ error: "Member not found" }, { status: 404 });
+      const dueAmount = await getDueAmount(prisma, member.id);
+      return NextResponse.json({ name: member.name, dueAmount });
+    }
+
     const status = request.nextUrl.searchParams.get("status") || "PENDING";
 
     const payments = await prisma.payment.findMany({
@@ -15,7 +28,16 @@ export async function GET(request) {
       orderBy: { createdAt: "asc" },
     });
 
-    return NextResponse.json({ payments });
+    // For a still-PENDING payment, show what's actually due right now so the
+    // admin can see at a glance whether the amount matches before approving.
+    const withDueAmount = await Promise.all(
+      payments.map(async (p) => ({
+        ...p,
+        dueAmount: p.status === "PENDING" ? await getDueAmount(prisma, p.userId) : null,
+      }))
+    );
+
+    return NextResponse.json({ payments: withDueAmount });
   } catch (err) {
     if (err instanceof AuthError) return NextResponse.json({ error: err.message }, { status: err.status });
     console.error(err);

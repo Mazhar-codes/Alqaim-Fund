@@ -116,6 +116,7 @@ model Installment {
   installmentNumber Int
   amount            Decimal           @db.Decimal(12, 2)
   loanDeduction     Decimal           @default(0) @db.Decimal(12, 2)
+  amountPaid        Decimal?          @db.Decimal(12, 2) // actual amount received toward `amount` — may be less than `amount` if admin approved a short payment
   dueDate           DateTime
   paidDate          DateTime?
   status            InstallmentStatus @default(PENDING)
