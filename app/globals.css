@@ -11,6 +11,11 @@ body {
   font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 }
 
+html[lang="ur"] body {
+  font-family: var(--font-urdu), "Noto Nastaliq Urdu", serif;
+  line-height: 2.1;
+}
+
 ::selection {
   @apply bg-brand-200 text-brand-900;
 }

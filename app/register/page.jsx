@@ -8,10 +8,12 @@ import { firebaseAuth } from "@/lib/firebaseClient";
 import Navbar from "@/components/Navbar";
 import Button from "@/components/Button";
 import { formatCnic, isGmailAddress } from "@/lib/validators";
+import { useLanguage } from "@/context/LanguageContext";
 
 function RegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { t } = useLanguage();
   const [plans, setPlans] = useState([]);
   const [form, setForm] = useState({
     name: "",
@@ -91,14 +93,15 @@ function RegisterForm() {
           <span className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100 text-green-600">
             <PartyPopper className="h-8 w-8" />
           </span>
-          <h1 className="mt-4 text-2xl font-bold text-gray-900">Welcome aboard!</h1>
+          <h1 className="mt-4 text-2xl font-bold text-gray-900">{t("register.welcomeTitle")}</h1>
           <p className="mt-3 text-gray-600">
-            Your Member ID is{" "}
+            {t("register.welcomeBody")}{" "}
             <span className="rounded-md bg-brand-50 px-2 py-1 font-mono text-lg font-bold text-brand-700">{success}</span>.
-            Use it with your password to log in.
+            {" "}
+            {t("register.welcomeBody2")}
           </p>
           <Button onClick={() => router.push("/login")} className="mt-6">
-            Go to Login
+            {t("register.goToLogin")}
           </Button>
         </main>
       </>
@@ -114,13 +117,13 @@ function RegisterForm() {
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-100 text-brand-700">
               <UserPlus className="h-5 w-5" />
             </span>
-            <h1 className="text-2xl font-bold text-gray-900">Join the Committee</h1>
+            <h1 className="text-2xl font-bold text-gray-900">{t("register.title")}</h1>
           </div>
 
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-            <Field label="Full Name" value={form.name} onChange={update("name")} required />
+            <Field label={t("register.fullName")} value={form.name} onChange={update("name")} required />
             <Field
-              label="CNIC"
+              label={t("register.cnic")}
               value={form.cnic}
               onChange={updateCnic}
               placeholder="42101-1234567-1"
@@ -128,27 +131,34 @@ function RegisterForm() {
               maxLength={15}
               required
             />
-            <Field label="Phone" value={form.phone} onChange={update("phone")} required />
-            <Field label="Address" value={form.address} onChange={update("address")} />
+            <Field label={t("register.phone")} value={form.phone} onChange={update("phone")} required />
+            <Field label={t("register.address")} value={form.address} onChange={update("address")} />
             <Field
-              label="Email (Gmail only)"
+              label={t("register.email")}
               type="email"
               value={form.email}
               onChange={update("email")}
               placeholder="you@gmail.com"
               required
             />
-            <Field label="Password" type="password" value={form.password} onChange={update("password")} required minLength={6} />
+            <Field
+              label={t("register.password")}
+              type="password"
+              value={form.password}
+              onChange={update("password")}
+              required
+              minLength={6}
+            />
 
             <div>
-              <label className="block text-sm font-medium text-gray-700">Select Plan</label>
+              <label className="block text-sm font-medium text-gray-700">{t("register.selectPlan")}</label>
               <select
                 value={form.planId}
                 onChange={update("planId")}
                 required
                 className="mt-1 w-full rounded-lg border-gray-300 shadow-sm transition focus:border-brand-500 focus:ring-brand-500"
               >
-                <option value="">Choose a plan</option>
+                <option value="">{t("register.choosePlan")}</option>
                 {plans.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name} — Rs. {Number(p.monthlyAmount).toLocaleString()}/month
@@ -165,7 +175,7 @@ function RegisterForm() {
             )}
 
             <Button type="submit" loading={submitting} className="w-full">
-              {submitting ? "Creating account…" : "Register"}
+              {submitting ? t("register.submitting") : t("register.submit")}
             </Button>
           </form>
         </div>

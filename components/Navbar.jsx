@@ -18,33 +18,48 @@ import {
   Menu,
   X,
   Home,
+  Languages,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
 
-const PUBLIC_LINKS = [{ href: "/", label: "Home", icon: Home }];
+const PUBLIC_LINKS = [{ href: "/", key: "nav.home", icon: Home }];
 
 const MEMBER_LINKS = [
-  { href: "/member/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/member/payments", label: "Payments", icon: Wallet },
-  { href: "/member/loan", label: "Emergency Loan", icon: HeartHandshake },
-  { href: "/member/transactions", label: "Transactions", icon: Receipt },
-  { href: "/member/profile", label: "Profile", icon: UserCircle },
+  { href: "/member/dashboard", key: "nav.dashboard", icon: LayoutDashboard },
+  { href: "/member/payments", key: "nav.payments", icon: Wallet },
+  { href: "/member/loan", key: "nav.loan", icon: HeartHandshake },
+  { href: "/member/transactions", key: "nav.transactions", icon: Receipt },
+  { href: "/member/profile", key: "nav.profile", icon: UserCircle },
 ];
 
 const ADMIN_LINKS = [
-  { href: "/admin", label: "Overview", icon: LayoutDashboard },
-  { href: "/admin/members", label: "Members", icon: Users },
-  { href: "/admin/payments", label: "Payment Queue", icon: ClipboardCheck },
-  { href: "/admin/loans", label: "Loan/Emergency Queue", icon: HeartHandshake },
-  { href: "/admin/reports", label: "Reports", icon: FileBarChart },
-  { href: "/admin/settings", label: "Settings", icon: Settings },
+  { href: "/admin", key: "nav.overview", icon: LayoutDashboard },
+  { href: "/admin/members", key: "nav.members", icon: Users },
+  { href: "/admin/payments", key: "nav.paymentQueue", icon: ClipboardCheck },
+  { href: "/admin/loans", key: "nav.loanQueue", icon: HeartHandshake },
+  { href: "/admin/reports", key: "nav.reports", icon: FileBarChart },
+  { href: "/admin/settings", key: "nav.settings", icon: Settings },
 ];
 
 export default function Navbar({ variant = "public" }) {
   const { firebaseUser, signOut } = useAuth();
+  const { lang, setLang, t } = useLanguage();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const links = variant === "member" ? MEMBER_LINKS : variant === "admin" ? ADMIN_LINKS : PUBLIC_LINKS;
+
+  function LangToggle({ className = "" }) {
+    return (
+      <button
+        onClick={() => setLang(lang === "ur" ? "en" : "ur")}
+        className={`flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 font-medium text-gray-600 transition hover:bg-gray-100 ${className}`}
+      >
+        <Languages className="h-4 w-4" />
+        {lang === "ur" ? "English" : "اردو"}
+      </button>
+    );
+  }
 
   return (
     <nav className="sticky top-0 z-40 border-b border-gray-200/80 bg-white/80 backdrop-blur-md">
@@ -57,7 +72,7 @@ export default function Navbar({ variant = "public" }) {
         </Link>
 
         <div className="hidden items-center gap-1 text-sm lg:flex">
-          {links.map(({ href, label, icon: Icon }) => {
+          {links.map(({ href, key, icon: Icon }) => {
             const active = pathname === href;
             return (
               <Link
@@ -68,17 +83,18 @@ export default function Navbar({ variant = "public" }) {
                 }`}
               >
                 <Icon className="h-4 w-4" />
-                {label}
+                {t(key)}
               </Link>
             );
           })}
+          <LangToggle className="ml-2" />
           {firebaseUser && (
             <button
               onClick={signOut}
-              className="ml-2 flex items-center gap-1.5 rounded-lg bg-gray-100 px-3 py-2 font-medium text-gray-700 transition hover:bg-gray-200"
+              className="flex items-center gap-1.5 rounded-lg bg-gray-100 px-3 py-2 font-medium text-gray-700 transition hover:bg-gray-200"
             >
               <LogOut className="h-4 w-4" />
-              Log out
+              {t("nav.logout")}
             </button>
           )}
         </div>
@@ -94,7 +110,7 @@ export default function Navbar({ variant = "public" }) {
 
       {open && (
         <div className="border-t border-gray-100 bg-white px-4 py-2 lg:hidden">
-          {links.map(({ href, label, icon: Icon }) => {
+          {links.map(({ href, key, icon: Icon }) => {
             const active = pathname === href;
             return (
               <Link
@@ -106,17 +122,20 @@ export default function Navbar({ variant = "public" }) {
                 }`}
               >
                 <Icon className="h-4 w-4" />
-                {label}
+                {t(key)}
               </Link>
             );
           })}
+          <div className="mt-1 px-1">
+            <LangToggle className="w-full justify-center" />
+          </div>
           {firebaseUser && (
             <button
               onClick={signOut}
               className="mt-1 flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-gray-600 hover:bg-gray-50"
             >
               <LogOut className="h-4 w-4" />
-              Log out
+              {t("nav.logout")}
             </button>
           )}
         </div>

@@ -383,17 +383,67 @@ installments. Everything else was unambiguous enough to just implement.
   don't retry resize_window — it's a confirmed environment limitation, not
   worth more attempts. Verify mobile on an actual device/DevTools instead.**
 
+## Status: Contact support + Urdu/RTL (this session)
+
+User asked for a specific phone number (+92 313 5448309) added as "contact
+support," a Urdu language option, and then to deploy. Contact support and
+Urdu are done; Vercel deploy status is unclear (user hasn't confirmed they
+completed the dashboard import) — ask before assuming it's live.
+
+- **Contact support**: `components/SupportButton.jsx` (new) — a global
+  floating WhatsApp-style button (bottom-right, every page, mounted in
+  `app/layout.jsx`) that expands to show the phone number with WhatsApp
+  (`wa.me/923135448309`) and Call (`tel:+923135448309`) links. Also added
+  a plain-text contact line to the landing page footer.
+- **Urdu / RTL**: real i18n added, not a token gesture.
+  - `lib/translations.js` — flat dictionary, `{ en: {...}, ur: {...} }`,
+    grouped by page (`nav`, `landing`, `login`, `adminLogin`, `register`,
+    `support`).
+  - `context/LanguageContext.jsx` — `lang` state persisted to
+    `localStorage`, `t(path)` lookup helper, and on every change sets
+    `document.documentElement.lang`/`.dir` directly (`dir="rtl"` for Urdu)
+    — this is what makes the whole page mirror automatically, no per-page
+    layout work needed beyond translating text.
+  - `app/layout.jsx` loads a second font, `Noto Nastaliq Urdu` (via
+    `next/font/google`, `--font-urdu` CSS var), switched in via
+    `html[lang="ur"] body` in `globals.css` — renders properly (verified
+    visually, not just "should work").
+  - Language toggle button (اردو ⇄ English) added to `Navbar` — present on
+    every page since Navbar is universal.
+  - **Translated pages**: Navbar labels, landing page (hero, how-it-works,
+    plans section headers, features, CTA, footer), `/login`, `/admin/login`,
+    `/register` (including the post-registration success screen). This is
+    the FULL scope translated — member/admin dashboard pages, API error
+    messages, and report data remain English-only. Told the user this
+    limitation explicitly rather than implying full-app translation.
+  - **Real bug found and fixed during live testing**: the phone number
+    `+92 313 5448309` rendered visually reversed/garbled when embedded in
+    Urdu (RTL) text — the Unicode bidi algorithm reorders LTR numeric runs
+    unpredictably inside an RTL context. Fixed by wrapping phone-number
+    text in `<span dir="ltr">`/`dir="ltr"` on the container in both
+    `app/page.jsx`'s footer and `SupportButton.jsx`. This is the standard
+    fix for embedding LTR content (phone numbers, emails, URLs) in RTL
+    text — **remember this pattern if more contact info gets added to
+    Urdu-translated pages later.**
+  - Verified live in a real browser: toggled EN→UR→EN on landing/login/
+    register, confirmed RTL mirroring (nav, hero, "How it works" grid
+    order, arrow icon directions via `rtl:rotate-180`), confirmed the
+    support popup renders and translates, confirmed language persists
+    across page navigation (localStorage).
+
 ## Status: WHAT'S NEXT
 
-1. Deploy to Vercel: import the GitHub repo, add every var from `.env`
-   (Neon + Cloudinary + Firebase are ALL known-good now, verified live) as
-   Vercel Environment Variables, deploy. Free `*.vercel.app` domain.
+1. **Confirm Vercel deployment status with the user** — they asked to
+   deploy but no confirmation was given that the dashboard import actually
+   happened. Don't assume it's live; ask.
 2. Decide what to do with accumulated test data (USR001, USR002 — the
    latter looks like the user's own manual testing, garbage placeholder
    name — plus a rejected MODALTEST01 payment) before real launch — ask
-   the user, don't just delete it. The admin delete-account feature built
-   this session makes this easy to do from the UI whenever they're ready.
-3. Bilingual Urdu/English + RTL UI — not started, do in a later pass.
+   the user, don't just delete it. The admin delete-account feature makes
+   this easy to do from the UI whenever they're ready.
+3. Translate the remaining pages (member dashboard, admin panel) into Urdu
+   if the user wants full-app coverage — the `lib/translations.js` +
+   `useLanguage()` pattern is already established, it's just more entries.
 4. SMS provider for MemberID notification — stubbed behind
    `Settings.smsEnabled`, no provider wired up (`lib/notify.js`).
 5. Admin login currently uses `ADMIN_SEED_EMAIL` (default

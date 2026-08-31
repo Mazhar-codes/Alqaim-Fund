@@ -7,9 +7,11 @@ import { ShieldCheck, AlertCircle } from "lucide-react";
 import { firebaseAuth } from "@/lib/firebaseClient";
 import Navbar from "@/components/Navbar";
 import Button from "@/components/Button";
+import { useLanguage } from "@/context/LanguageContext";
 
 export default function AdminLogin() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -48,12 +50,12 @@ export default function AdminLogin() {
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-900 text-white">
               <ShieldCheck className="h-5 w-5" />
             </span>
-            <h1 className="text-2xl font-bold text-gray-900">Admin Login</h1>
+            <h1 className="text-2xl font-bold text-gray-900">{t("adminLogin.title")}</h1>
           </div>
 
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Username</label>
+              <label className="block text-sm font-medium text-gray-700">{t("adminLogin.username")}</label>
               <input
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
@@ -63,7 +65,7 @@ export default function AdminLogin() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Password</label>
+              <label className="block text-sm font-medium text-gray-700">{t("adminLogin.password")}</label>
               <input
                 type="password"
                 value={password}
@@ -79,7 +81,7 @@ export default function AdminLogin() {
               </p>
             )}
             <Button type="submit" variant="dark" loading={submitting} className="w-full">
-              {submitting ? "Signing in…" : "Log In"}
+              {submitting ? t("adminLogin.signingIn") : t("adminLogin.logIn")}
             </Button>
           </form>
         </div>

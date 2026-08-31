@@ -11,49 +11,21 @@ import {
   FileCheck2,
   Banknote,
   Sparkles,
+  MessageCircle,
+  Phone,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import PlanCard from "@/components/PlanCard";
 import Reveal from "@/components/Reveal";
 import TiltCard from "@/components/TiltCard";
+import { useLanguage } from "@/context/LanguageContext";
 
-const STEPS = [
-  {
-    icon: Wallet,
-    title: "1. Join a plan",
-    body: "Pick Plan A, B, or C and pay a fixed monthly installment — no hidden fees, no surprises.",
-  },
-  {
-    icon: FileCheck2,
-    title: "2. Build eligibility",
-    body: "After completing your full 12-month cycle you're eligible to request emergency support if you ever need it.",
-  },
-  {
-    icon: Banknote,
-    title: "3. Get help, interest-free",
-    body: "A genuine emergency, admin-approved, and funds are released — repaid with zero interest.",
-  },
-];
-
-const FEATURES = [
-  {
-    icon: Banknote,
-    title: "No Interest",
-    body: "Borrow Rs. 100,000, return exactly Rs. 100,000. Always.",
-  },
-  {
-    icon: HeartHandshake,
-    title: "Emergency Support",
-    body: "Loans are for genuine emergencies only — accident, death, medical crisis — admin-verified before funds move.",
-  },
-  {
-    icon: Eye,
-    title: "Full Transparency",
-    body: "Every rupee in and out is logged in your personal transaction ledger.",
-  },
-];
+const SUPPORT_PHONE_DISPLAY = "+92 313 5448309";
+const SUPPORT_WHATSAPP = "923135448309";
+const SUPPORT_TEL = "+923135448309";
 
 export default function Landing() {
+  const { t } = useLanguage();
   const [plans, setPlans] = useState([]);
 
   useEffect(() => {
@@ -61,6 +33,18 @@ export default function Landing() {
       .then((r) => r.json())
       .then((d) => setPlans(d.plans || []));
   }, []);
+
+  const STEPS = [
+    { icon: Wallet, title: t("landing.step1Title"), body: t("landing.step1Body") },
+    { icon: FileCheck2, title: t("landing.step2Title"), body: t("landing.step2Body") },
+    { icon: Banknote, title: t("landing.step3Title"), body: t("landing.step3Body") },
+  ];
+
+  const FEATURES = [
+    { icon: Banknote, title: t("landing.feature1Title"), body: t("landing.feature1Body") },
+    { icon: HeartHandshake, title: t("landing.feature2Title"), body: t("landing.feature2Body") },
+    { icon: Eye, title: t("landing.feature3Title"), body: t("landing.feature3Body") },
+  ];
 
   return (
     <>
@@ -84,8 +68,8 @@ export default function Landing() {
               <ShieldCheck className="h-4.5 w-4.5" />
             </span>
             <div className="text-left">
-              <p className="text-xs text-gray-400">No Interest</p>
-              <p className="text-sm font-semibold text-gray-800">Rs. 100,000 in, Rs. 100,000 out</p>
+              <p className="text-xs text-gray-400">{t("landing.badge1Title")}</p>
+              <p className="text-sm font-semibold text-gray-800">{t("landing.badge1Body")}</p>
             </div>
           </div>
           <div
@@ -96,8 +80,8 @@ export default function Landing() {
               <HeartHandshake className="h-4.5 w-4.5" />
             </span>
             <div className="text-left">
-              <p className="text-xs text-gray-400">Emergency Fund</p>
-              <p className="text-sm font-semibold text-gray-800">Admin-approved & released</p>
+              <p className="text-xs text-gray-400">{t("landing.badge2Title")}</p>
+              <p className="text-sm font-semibold text-gray-800">{t("landing.badge2Body")}</p>
             </div>
           </div>
           <div
@@ -108,44 +92,40 @@ export default function Landing() {
               <Wallet className="h-4.5 w-4.5" />
             </span>
             <div className="text-left">
-              <p className="text-xs text-gray-400">Every Rupee Tracked</p>
-              <p className="text-sm font-semibold text-gray-800">Full IN/OUT ledger</p>
+              <p className="text-xs text-gray-400">{t("landing.badge3Title")}</p>
+              <p className="text-sm font-semibold text-gray-800">{t("landing.badge3Body")}</p>
             </div>
           </div>
 
           <div className="mx-auto max-w-4xl text-center">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-brand-200 bg-white/70 px-3 py-1 text-xs font-medium text-brand-700 shadow-sm backdrop-blur">
               <Sparkles className="h-3.5 w-3.5" />
-              A committee fund built on trust
+              {t("landing.badge")}
             </span>
 
             <h1 className="mt-5 text-4xl font-extrabold leading-tight tracking-tight text-gray-900 sm:text-6xl">
-              Save together.{" "}
+              {t("landing.titlePre")}
               <span className="bg-gradient-to-r from-brand-600 to-accent-500 bg-clip-text text-transparent">
-                Support each other
-              </span>{" "}
-              when it matters most.
+                {t("landing.titleHighlight")}
+              </span>
+              {t("landing.titlePost")}
             </h1>
 
-            <p className="mx-auto mt-5 max-w-2xl text-lg text-gray-600">
-              Save monthly with your community. When a genuine emergency hits — accident,
-              death in the family, hospitalization — apply for an interest-free loan,
-              approved by an admin, funds released fast.
-            </p>
+            <p className="mx-auto mt-5 max-w-2xl text-lg text-gray-600">{t("landing.subtitle")}</p>
 
             <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
               <Link
                 href="#plans"
                 className="group flex items-center justify-center gap-2 rounded-lg bg-brand-600 px-6 py-3 font-medium text-white shadow-md shadow-brand-200 transition-all hover:-translate-y-0.5 hover:bg-brand-700 hover:shadow-lg"
               >
-                View Plans
-                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                {t("landing.viewPlans")}
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 rtl:rotate-180" />
               </Link>
               <Link
                 href="/login"
                 className="flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-6 py-3 font-medium text-gray-700 transition-all hover:-translate-y-0.5 hover:border-gray-400 hover:shadow-md"
               >
-                Member Login
+                {t("landing.memberLogin")}
               </Link>
             </div>
           </div>
@@ -154,8 +134,8 @@ export default function Landing() {
         {/* How it works */}
         <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
           <Reveal className="text-center">
-            <h2 className="text-2xl font-bold text-gray-900 sm:text-3xl">How It Works</h2>
-            <p className="mt-2 text-gray-500">Three simple steps from joining to getting support.</p>
+            <h2 className="text-2xl font-bold text-gray-900 sm:text-3xl">{t("landing.howItWorks")}</h2>
+            <p className="mt-2 text-gray-500">{t("landing.howItWorksSub")}</p>
           </Reveal>
 
           <div className="relative mt-12 grid gap-8 sm:grid-cols-3">
@@ -175,8 +155,8 @@ export default function Landing() {
         {/* Plans */}
         <section id="plans" className="bg-gray-50/80 px-4 py-20 sm:px-6">
           <Reveal className="text-center">
-            <h2 className="text-2xl font-bold text-gray-900 sm:text-3xl">Choose Your Plan</h2>
-            <p className="mt-2 text-gray-500">Fixed monthly installments. Pick what fits your budget.</p>
+            <h2 className="text-2xl font-bold text-gray-900 sm:text-3xl">{t("landing.choosePlan")}</h2>
+            <p className="mt-2 text-gray-500">{t("landing.choosePlanSub")}</p>
           </Reveal>
 
           <div className="mx-auto mt-10 grid max-w-5xl gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -217,22 +197,38 @@ export default function Landing() {
             <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
             <div className="pointer-events-none absolute -bottom-10 -left-10 h-40 w-40 rounded-full bg-accent-400/20 blur-2xl" />
             <ShieldCheck className="mx-auto h-10 w-10 text-white/90" />
-            <h2 className="mt-4 text-2xl font-bold text-white sm:text-3xl">Ready to join the committee?</h2>
-            <p className="mx-auto mt-2 max-w-md text-brand-100">
-              Registration takes less than two minutes. Your Member ID is generated instantly.
-            </p>
+            <h2 className="mt-4 text-2xl font-bold text-white sm:text-3xl">{t("landing.ctaTitle")}</h2>
+            <p className="mx-auto mt-2 max-w-md text-brand-100">{t("landing.ctaSub")}</p>
             <Link
               href="#plans"
               className="mt-6 inline-flex items-center gap-2 rounded-lg bg-white px-6 py-3 font-semibold text-brand-700 shadow-md transition-all hover:-translate-y-0.5 hover:shadow-lg"
             >
-              Get Started
-              <ArrowRight className="h-4 w-4" />
+              {t("landing.ctaButton")}
+              <ArrowRight className="h-4 w-4 rtl:rotate-180" />
             </Link>
           </div>
         </Reveal>
 
-        <footer className="border-t border-gray-200 bg-white px-4 py-8 text-center text-sm text-gray-500 sm:px-6">
-          © {new Date().getFullYear()} Alqaim Fund. Built on trust, transparency, and community.
+        <footer className="border-t border-gray-200 bg-white px-4 py-10 text-center text-sm text-gray-500 sm:px-6">
+          <p>
+            © {new Date().getFullYear()} Alqaim Fund. {t("landing.footer")}
+          </p>
+          <div className="mt-4 flex flex-col items-center justify-center gap-2 sm:flex-row sm:gap-4">
+            <span className="font-medium text-gray-600">{t("support.contactSupport")}:</span>
+            <a
+              href={`https://wa.me/${SUPPORT_WHATSAPP}`}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1.5 text-green-700 hover:underline"
+            >
+              <MessageCircle className="h-4 w-4" />
+              <span dir="ltr">{SUPPORT_PHONE_DISPLAY}</span>
+            </a>
+            <a href={`tel:${SUPPORT_TEL}`} className="inline-flex items-center gap-1.5 text-brand-700 hover:underline">
+              <Phone className="h-4 w-4" />
+              {t("support.call")}
+            </a>
+          </div>
         </footer>
       </main>
     </>

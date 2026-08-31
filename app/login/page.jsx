@@ -7,9 +7,11 @@ import { LogIn, AlertCircle } from "lucide-react";
 import { firebaseAuth } from "@/lib/firebaseClient";
 import Navbar from "@/components/Navbar";
 import Button from "@/components/Button";
+import { useLanguage } from "@/context/LanguageContext";
 
 export default function Login() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [memberId, setMemberId] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -44,12 +46,12 @@ export default function Login() {
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-100 text-brand-700">
               <LogIn className="h-5 w-5" />
             </span>
-            <h1 className="text-2xl font-bold text-gray-900">Member Login</h1>
+            <h1 className="text-2xl font-bold text-gray-900">{t("login.title")}</h1>
           </div>
 
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Member ID</label>
+              <label className="block text-sm font-medium text-gray-700">{t("login.memberId")}</label>
               <input
                 value={memberId}
                 onChange={(e) => setMemberId(e.target.value)}
@@ -59,7 +61,7 @@ export default function Login() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Password</label>
+              <label className="block text-sm font-medium text-gray-700">{t("login.password")}</label>
               <input
                 type="password"
                 value={password}
@@ -75,14 +77,14 @@ export default function Login() {
               </p>
             )}
             <Button type="submit" loading={submitting} className="w-full">
-              {submitting ? "Signing in…" : "Log In"}
+              {submitting ? t("login.signingIn") : t("login.logIn")}
             </Button>
           </form>
         </div>
         <p className="mt-4 text-center text-sm text-gray-500">
-          New here?{" "}
+          {t("login.newHere")}{" "}
           <a href="/register" className="font-medium text-brand-700 hover:underline">
-            Register
+            {t("login.register")}
           </a>
         </p>
       </main>
