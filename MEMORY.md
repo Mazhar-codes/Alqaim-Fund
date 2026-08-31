@@ -458,6 +458,63 @@ the import themselves. Ran a real smoke test against the production URL
   production) to avoid adding more noise to real data — read-only checks
   were sufficient to confirm the deployment is healthy.
 
+## Status: Ledger integrity bug fixed (this session)
+
+User reported via a production admin-panel screenshot: a member on Plan B
+(Rs. 3,000/mo) paid Rs. 2,000, but the transaction ledger showed Rs. 3,000
+paid. Confirmed via direct Neon psql query this was a real data bug, not a
+display bug — `payments.amount=2000` but `transactions.amount=3000` for the
+same event (transaction id=7, installment id=13, member USR002).
+
+- **Root cause**: `lib/payments.js`'s `applyApprovedPayment` built the
+  ledger `Transaction` row (and the plan/loan-repayment split) from
+  `installment.amount` — the *scheduled* due amount — instead of the
+  `amount` parameter actually passed in, i.e. what was *really* paid. This
+  was invisible on the auto-verify path (member upload) because that path
+  requires an exact amount match before calling the function at all — but
+  it silently broke the ledger any time an admin approved a mismatched
+  PENDING payment, or used "Add Payment Manually" with an amount that
+  didn't match what was due. `user.totalPaid` was always correct (it
+  increments by the real `amount`); only the ledger and the installment
+  record were wrong. **This is the kind of bug to watch for again**: any
+  future payment-adjacent code must derive amounts from what was actually
+  received, never from what was scheduled/expected.
+- **Fix** (`lib/payments.js`): splits the real `amount` between the
+  plan-due portion (`Math.min(amount, installment.amount)`) and the
+  loan-repayment portion, and uses that real split for both the ledger
+  entry and the installment's new `amountPaid` field — never assumes a match.
+- **Schema**: added `Installment.amountPaid` (migration
+  `20260831004258_track_amount_paid_on_installments`) so a short payment
+  stays visible everywhere, not just reconstructable from the ledger.
+- **Preventative UI** (not just a silent fix): admin payment queue
+  (`app/admin/payments/page.jsx`) now shows a "Due" column with an amber
+  warning icon when a pending payment doesn't match what's due, and the
+  "Add Payment Manually" form checks the due amount on blur of the Member
+  ID field. Both the queue-approve action and the manual-entry submit now
+  open a confirmation `Modal` ("Amount doesn't match what's due — Approve
+  Anyway / Record Anyway") before committing a mismatched amount — added
+  via `getDueAmount()` in `lib/payments.js`, exposed through
+  `GET /api/admin/payments` (both the pending-list and a `?memberId=`
+  single-lookup mode).
+- **Transparency for the shortfall**: both `app/admin/members/[id]/page.jsx`
+  (admin ledger view) and `app/member/dashboard/page.jsx` (member's own
+  view) now show an amber "⚠ Rs. X (Rs. Y short)" / "⚠ Only Rs. X received"
+  line on any installment where `amountPaid < amount`.
+- **Data correction**: the specific bad record the user flagged was
+  corrected directly via Neon psql (`UPDATE transactions SET amount=2000,
+  "balanceAfter"=2000 WHERE id=7; UPDATE installments SET
+  "amountPaid"=2000 WHERE id=13`) — confirmed via SELECT before and after.
+- **Verified live** (local dev against the same production Neon DB): admin
+  member ledger page for USR002 now shows the corrected Rs. 2,000/Rs. 2,000
+  in the ledger and the shortfall warning on the installment; used the
+  real "Add Payment Manually" form to enter a deliberately mismatched
+  amount (USR002, Rs. 2,500 against a Rs. 3,000 due) and confirmed the new
+  "Amount doesn't match what's due" modal fires correctly and Cancel
+  aborts cleanly with no data written.
+- Committed (`5a67395`) and pushed to `main` — Vercel will redeploy and run
+  `prisma migrate deploy` automatically (idempotent, since the migration
+  was already applied directly to the same Neon DB during this fix).
+
 ## Status: WHAT'S NEXT
 
 1. Decide what to do with accumulated test data (USR001, USR002 — the
