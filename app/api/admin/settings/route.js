@@ -14,11 +14,12 @@ export async function GET(request) {
   }
 }
 
-/** Body: { defaultTenureMonths?, minInstallmentsForLoan?, smsEnabled?, companyBankDetails? } */
+/** Body: { defaultTenureMonths?, minInstallmentsForLoan?, smsEnabled?, companyBankDetails?, reportRecipientEmail? } */
 export async function PATCH(request) {
   try {
     await requireAdmin(request);
-    const { defaultTenureMonths, minInstallmentsForLoan, smsEnabled, companyBankDetails } = await request.json();
+    const { defaultTenureMonths, minInstallmentsForLoan, smsEnabled, companyBankDetails, reportRecipientEmail } =
+      await request.json();
 
     const settings = await prisma.settings.upsert({
       where: { id: 1 },
@@ -27,6 +28,7 @@ export async function PATCH(request) {
         ...(minInstallmentsForLoan !== undefined && { minInstallmentsForLoan: Number(minInstallmentsForLoan) }),
         ...(smsEnabled !== undefined && { smsEnabled: Boolean(smsEnabled) }),
         ...(companyBankDetails !== undefined && { companyBankDetails }),
+        ...(reportRecipientEmail !== undefined && { reportRecipientEmail: reportRecipientEmail || null }),
       },
       create: {
         id: 1,
@@ -34,6 +36,7 @@ export async function PATCH(request) {
         ...(minInstallmentsForLoan !== undefined && { minInstallmentsForLoan: Number(minInstallmentsForLoan) }),
         ...(smsEnabled !== undefined && { smsEnabled: Boolean(smsEnabled) }),
         ...(companyBankDetails !== undefined && { companyBankDetails }),
+        ...(reportRecipientEmail !== undefined && { reportRecipientEmail: reportRecipientEmail || null }),
       },
     });
 

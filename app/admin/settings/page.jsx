@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Settings as SettingsIcon, SlidersHorizontal, ShieldCheck, AlertCircle, CheckCircle2, PlusCircle } from "lucide-react";
+import { Settings as SettingsIcon, SlidersHorizontal, ShieldCheck, AlertCircle, CheckCircle2, PlusCircle, Mail, Send } from "lucide-react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Navbar from "@/components/Navbar";
 import Button from "@/components/Button";
@@ -15,6 +15,7 @@ function SettingsContent() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [sendingTestReport, setSendingTestReport] = useState(false);
 
   function load() {
     authedFetch("/api/admin/settings").then((d) => setSettings(d.settings));
@@ -48,6 +49,24 @@ function SettingsContent() {
       load();
     } catch (err) {
       setError(err.message);
+    }
+  }
+
+  async function sendTestReport() {
+    setError("");
+    setMessage("");
+    setSendingTestReport(true);
+    try {
+      const res = await authedFetch("/api/cron/monthly-report");
+      if (res.sent) {
+        setMessage(`Sent — ${res.month}, ${res.count} payment(s), to ${settings.reportRecipientEmail}.`);
+      } else {
+        setMessage(res.error || "Nothing was sent.");
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSendingTestReport(false);
     }
   }
 
@@ -130,6 +149,46 @@ function SettingsContent() {
           <Button type="submit" loading={saving}>
             Save Settings
           </Button>
+        </form>
+      </Reveal>
+
+      <Reveal delay={75}>
+        <form onSubmit={saveSettings} className="mt-6 space-y-4 rounded-xl border bg-white p-5 shadow-sm">
+          <h2 className="flex items-center gap-1.5 font-semibold text-gray-900">
+            <Mail className="h-4 w-4 text-gray-500" />
+            Monthly Payments Report
+          </h2>
+          <p className="text-sm text-gray-500">
+            On the 1st of every month, last month's approved payments (with screenshots embedded) are automatically
+            emailed here as an Excel file. Requires a real email-sending account to be configured server-side
+            (<code className="rounded bg-gray-100 px-1">RESEND_API_KEY</code> — see <code className="rounded bg-gray-100 px-1">.env.example</code>)
+            before this actually sends anything.
+          </p>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Send Reports To</label>
+            <input
+              type="email"
+              placeholder="you@example.com"
+              value={settings.reportRecipientEmail || ""}
+              onChange={(e) => setSettings((s) => ({ ...s, reportRecipientEmail: e.target.value }))}
+              className="mt-1 w-full rounded-lg border-gray-300 shadow-sm transition focus:border-brand-500 focus:ring-brand-500"
+            />
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <Button type="submit" loading={saving}>
+              Save Settings
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              icon={Send}
+              loading={sendingTestReport}
+              disabled={!settings.reportRecipientEmail}
+              onClick={sendTestReport}
+            >
+              Send Test Report Now
+            </Button>
+          </div>
         </form>
       </Reveal>
 

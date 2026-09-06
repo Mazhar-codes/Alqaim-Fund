@@ -212,6 +212,10 @@ model Settings {
   minInstallmentsForLoan Int      @default(12)
   smsEnabled             Boolean  @default(false)
   companyBankDetails     String?  @db.Text
+  // Where the automated monthly payments report is emailed — deliberately
+  // separate from any admin's login email, since that can be a synthetic
+  // placeholder (see ADMIN_SEED_EMAIL) rather than a real inbox.
+  reportRecipientEmail   String?
   updatedAt              DateTime @updatedAt
 
   @@map("settings")

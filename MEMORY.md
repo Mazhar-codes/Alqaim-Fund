@@ -710,6 +710,84 @@ already editable in the existing Plan Amounts section of
   it would need real thought about what happens to them — punt until
   actually requested).
 
+## Status: Payment history + automated monthly emailed report (this session)
+
+User asked for (1) a way to see a member's full history in admin, including
+screenshots, surviving past approval, and (2) an automated monthly Excel
+export "with pictures" delivered without the admin asking. Explained the
+real constraints first (Firebase can't tell us when a password is
+changed; no web app can literally push a file onto someone's device) and
+let the user choose scope via AskUserQuestion rather than guessing:
+**payment-history section now** (not a full activity-log table),
+**skip password-change tracking**, **email the monthly report** (not
+Cloudinary-archive or Google Drive), **embed the actual screenshots in the
+spreadsheet** (not just a data-only export).
+
+- **Payment History section** (`app/admin/members/[id]/page.jsx`): new
+  `Section` rendering `member.payments` (was already fetched by
+  `GET /api/admin/members/[id]` but never displayed) — date, amount,
+  transaction ID, status, reject reason, and a "View" link to the
+  screenshot. Zero schema/API changes needed, this data already existed.
+- **`Settings.reportRecipientEmail`** (new nullable field, migration
+  `20260906091342_add_report_recipient_email`) — deliberately separate
+  from any admin's Firebase login email, since `ADMIN_SEED_EMAIL` is a
+  synthetic placeholder (`admin@alqaimfund.local`), not necessarily a real
+  inbox. Editable via a new "Monthly Payments Report" card on
+  `/admin/settings`, which also has a **"Send Test Report Now"** button so
+  this can be verified without waiting for the 1st of the month.
+- **`lib/email.js`** — real email sending via Resend's HTTP API (no SDK
+  dependency, just `fetch`). Gated behind `RESEND_API_KEY`/
+  `RESEND_FROM_EMAIL` exactly like `lib/notify.js`'s SMS gate: logs and
+  no-ops until those are actually set. **This is a genuinely new external
+  dependency the user needs to set up themselves** — sign up at
+  resend.com (free tier), verify a sending domain or use their sandbox
+  sender (`onboarding@resend.dev`) for testing, create an API key, add
+  both env vars locally AND in Vercel's project settings. Nothing will
+  actually send until this is done — documented directly in
+  `.env.example` and in the Settings page copy.
+- **`lib/monthlyReport.js`** — `previousMonthRange()` (UTC-based, same
+  date discipline as `lib/dueDate.js`) and `buildMonthlyPaymentsWorkbook`,
+  which queries `Payment` rows `APPROVED` with `paymentDate` in that
+  range and builds an ExcelJS workbook with each row's screenshot
+  **embedded as an actual image** (fetches the Cloudinary URL, detects
+  extension from the URL, `workbook.addImage`/`sheet.addImage` anchored to
+  that row) — falls back to a "View (PDF)" hyperlink for non-image proofs
+  (a loan doc could be a PDF), and to a "View (embed failed)" hyperlink if
+  the fetch/embed throws, so one bad image never breaks the whole report.
+- **`GET /api/cron/monthly-report`** (new route) — accepts either a Vercel
+  Cron request (`Authorization: Bearer <CRON_SECRET>`, Vercel's documented
+  pattern for securing cron endpoints) or a normal admin Firebase Bearer
+  token (so the Settings page's test button can hit the same route).
+  Optional `?month=YYYY-MM` override for testing against a month that
+  actually has data — the real cron call never passes this, always uses
+  last calendar month.
+- **`vercel.json`** (new) — `crons: [{ path: "/api/cron/monthly-report",
+  schedule: "0 6 1 * *" }]` — 06:00 UTC on the 1st of every month. Well
+  within Vercel Hobby-plan cron limits (low frequency, one job).
+- **Verified live** against the real Neon DB + real Cloudinary screenshot
+  (not just build-checked): hit the route locally with `?month=2026-08`
+  before any recipient email was set — correctly returned "no
+  reportRecipientEmail set" without crashing. Temporarily set a real
+  `reportRecipientEmail` via the settings API, re-ran for `2026-09` (a
+  month with a real approved payment that has a real Cloudinary
+  screenshot) — got back `{"sent":false,"reason":"not_configured",
+  "count":3}` (correct, since `RESEND_API_KEY` isn't set locally), and
+  confirmed via the dev server log that NO "failed to embed" warning was
+  logged for that payment — i.e. the screenshot fetch+embed genuinely
+  succeeded, not just "didn't crash." Reverted `reportRecipientEmail` back
+  to `null` afterward so no test artifact was left in the real settings
+  row. `next build` clean (35 routes).
+- **Still needed before this actually emails anything in production**:
+  the user needs to (1) sign up for Resend and add `RESEND_API_KEY` +
+  `RESEND_FROM_EMAIL` to Vercel's env vars, (2) set `CRON_SECRET` in
+  Vercel too (any random string), (3) set a real `reportRecipientEmail` in
+  `/admin/settings`. None of this can be done on the user's behalf — it
+  requires their own Resend account.
+- **Deliberately NOT built** (per the user's own choice in
+  AskUserQuestion): a general activity-log table (logins, profile edits,
+  suspend/reactivate) and password-change tracking (would need replacing
+  Firebase's hosted reset page with a custom one). Revisit only if asked.
+
 ## Status: WHAT'S NEXT
 
 1. Decide what to do with accumulated test data (USR001, USR002 — the

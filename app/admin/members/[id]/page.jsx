@@ -12,6 +12,7 @@ import {
   ArrowUpCircle,
   Trash2,
   AlertTriangle,
+  ExternalLink,
 } from "lucide-react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Navbar from "@/components/Navbar";
@@ -165,6 +166,29 @@ function MemberLedgerContent() {
               return `Rs. ${Number(v).toLocaleString()}`;
             },
             status: (v) => <StatusBadge status={v} />,
+          }}
+        />
+      </Section>
+
+      <Section title="Payment History">
+        <Table
+          rows={member.payments}
+          cols={["createdAt", "amount", "paymentDate", "transactionId", "status", "rejectReason", "proofUrl"]}
+          render={{
+            createdAt: (v) => formatDate(v),
+            amount: (v) => `Rs. ${Number(v).toLocaleString()}`,
+            paymentDate: (v) => formatDate(v),
+            transactionId: (v) => v || "—",
+            status: (v) => <StatusBadge status={v} />,
+            rejectReason: (v) => v || "—",
+            proofUrl: (v) =>
+              v ? (
+                <a href={v} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-brand-700 hover:underline">
+                  View <ExternalLink className="h-3 w-3" />
+                </a>
+              ) : (
+                "—"
+              ),
           }}
         />
       </Section>
