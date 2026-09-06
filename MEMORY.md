@@ -843,6 +843,34 @@ Rs. 2,000/mo. Traced it to a real root cause, not random corruption.
   per-plan edit form to correct a genuine mistake in an EXISTING plan
   that no one should have been paying differently for.
 
+## Status: Admin can edit member details, members can edit their own name (this session)
+
+Straightforward feature add after the plan-mismatch fix — no schema
+changes, both fields already existed on `User`.
+
+- **Admin**: `PATCH /api/admin/members/[id]` now also accepts `name` and
+  `cnic` (previously only `status`/`phone`/`address`) — validates CNIC
+  format via `lib/validators.isValidCnic`, returns a clear 409 on a
+  duplicate-CNIC conflict (`P2002`) instead of a generic 500. New "Edit"
+  button + `Modal` on `/admin/members/[id]` (next to Suspend/Delete) with
+  Name/CNIC/Phone/Address fields, CNIC auto-formatted with dashes via the
+  same `formatCnic` used at registration.
+- **Member**: `PATCH /api/member/profile` now also accepts `name`. Added a
+  "Full Name" field to the existing "Contact Details" card on
+  `/member/profile`, above Phone/Address. **Deliberately did not** add
+  CNIC editing on the member side — that's an identity document, kept
+  admin-only on purpose.
+- Neither endpoint touches Firebase (name/CNIC aren't Firebase Auth
+  fields — only email/password are), so no Firebase Admin SDK calls
+  needed here, unlike the delete-account or register flows.
+- **Verified live** against the real Neon DB (not just build-checked):
+  used the same real-Firebase-custom-token trick as prior sessions to hit
+  both endpoints as a real admin AND as a real member (USR014), for both
+  the admin-edit and self-edit paths — confirmed each write applied, then
+  reverted the test member's name back to its original value immediately
+  after. `next build` clean (35 routes, no new routes — just PATCH body
+  changes on two existing ones).
+
 ## Status: WHAT'S NEXT
 
 1. Decide what to do with accumulated test data (USR001, USR002 — the

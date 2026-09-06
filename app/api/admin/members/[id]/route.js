@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin, AuthError } from "@/lib/auth";
 import { getAdminAuth } from "@/lib/firebaseAdmin";
+import { isValidCnic } from "@/lib/validators";
 
 /** Full member ledger: profile, installments, payments, loans, transactions. */
 export async function GET(request, { params }) {
@@ -29,17 +30,23 @@ export async function GET(request, { params }) {
   }
 }
 
-/** Body: { status?: "ACTIVE"|"SUSPENDED", phone?, address? } — edit/suspend a member. */
+/** Body: { status?: "ACTIVE"|"SUSPENDED", name?, cnic?, phone?, address? } — edit/suspend a member. */
 export async function PATCH(request, { params }) {
   try {
     await requireAdmin(request);
     const id = Number(params.id);
-    const { status, phone, address } = await request.json();
+    const { status, name, cnic, phone, address } = await request.json();
+
+    if (cnic !== undefined && !isValidCnic(cnic)) {
+      return NextResponse.json({ error: "CNIC must be in the format 42101-1234567-1" }, { status: 400 });
+    }
 
     const member = await prisma.user.update({
       where: { id },
       data: {
         ...(status && { status }),
+        ...(name && { name }),
+        ...(cnic !== undefined && { cnic }),
         ...(phone && { phone }),
         ...(address !== undefined && { address }),
       },
@@ -48,6 +55,9 @@ export async function PATCH(request, { params }) {
     return NextResponse.json({ member });
   } catch (err) {
     if (err instanceof AuthError) return NextResponse.json({ error: err.message }, { status: err.status });
+    if (err.code === "P2002") {
+      return NextResponse.json({ error: "That CNIC is already registered to another member" }, { status: 409 });
+    }
     console.error(err);
     return NextResponse.json({ error: "Failed to update member" }, { status: 500 });
   }

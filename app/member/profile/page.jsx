@@ -13,7 +13,7 @@ import { uploadToCloudinary } from "@/lib/cloudinary";
 function ProfileContent() {
   const { authedFetch, firebaseUser } = useAuth();
   const [profile, setProfile] = useState(null);
-  const [form, setForm] = useState({ phone: "", address: "" });
+  const [form, setForm] = useState({ name: "", phone: "", address: "" });
   const [pwForm, setPwForm] = useState({ current: "", next: "" });
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -24,7 +24,7 @@ function ProfileContent() {
   useEffect(() => {
     authedFetch("/api/member/profile").then((d) => {
       setProfile(d.profile);
-      setForm({ phone: d.profile.phone, address: d.profile.address || "" });
+      setForm({ name: d.profile.name, phone: d.profile.phone, address: d.profile.address || "" });
     });
   }, [authedFetch]);
 
@@ -138,6 +138,15 @@ function ProfileContent() {
       <Reveal delay={80}>
         <form onSubmit={saveProfile} className="mt-6 space-y-4 rounded-xl border bg-white p-5 shadow-sm">
           <h2 className="font-semibold text-gray-900">Contact Details</h2>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Full Name</label>
+            <input
+              value={form.name}
+              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+              required
+              className="mt-1 w-full rounded-lg border-gray-300 shadow-sm transition focus:border-brand-500 focus:ring-brand-500"
+            />
+          </div>
           <div>
             <label className="block text-sm font-medium text-gray-700">Phone</label>
             <input

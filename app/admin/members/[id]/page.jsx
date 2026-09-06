@@ -13,6 +13,8 @@ import {
   Trash2,
   AlertTriangle,
   ExternalLink,
+  Pencil,
+  CheckCircle2,
 } from "lucide-react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Navbar from "@/components/Navbar";
@@ -22,6 +24,7 @@ import Modal from "@/components/Modal";
 import Reveal from "@/components/Reveal";
 import { useAuth } from "@/context/AuthContext";
 import { formatDate } from "@/lib/formatDate";
+import { formatCnic } from "@/lib/validators";
 
 function MemberLedgerContent() {
   const { authedFetch } = useAuth();
@@ -35,6 +38,10 @@ function MemberLedgerContent() {
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
+  const [editOpen, setEditOpen] = useState(false);
+  const [editForm, setEditForm] = useState({ name: "", cnic: "", phone: "", address: "" });
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [editError, setEditError] = useState("");
 
   function load() {
     authedFetch(`/api/admin/members/${params.id}`)
@@ -60,6 +67,22 @@ function MemberLedgerContent() {
       setError(err.message);
     } finally {
       setToggling(false);
+    }
+  }
+
+  async function saveEdit(e) {
+    e.preventDefault();
+    setEditError("");
+    setSavingEdit(true);
+    try {
+      await authedFetch(`/api/admin/members/${params.id}`, { method: "PATCH", body: JSON.stringify(editForm) });
+      setMessage("Member details updated.");
+      setEditOpen(false);
+      load();
+    } catch (err) {
+      setEditError(err.message);
+    } finally {
+      setSavingEdit(false);
     }
   }
 
@@ -111,6 +134,23 @@ function MemberLedgerContent() {
         <div className="flex flex-col items-end gap-2">
           <StatusBadge status={member.status} />
           <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              icon={Pencil}
+              onClick={() => {
+                setEditForm({
+                  name: member.name,
+                  cnic: member.cnic || "",
+                  phone: member.phone,
+                  address: member.address || "",
+                });
+                setEditError("");
+                setEditOpen(true);
+              }}
+            >
+              Edit
+            </Button>
             <Button
               variant={member.status === "SUSPENDED" ? "success" : "outline"}
               size="sm"
@@ -229,6 +269,63 @@ function MemberLedgerContent() {
           }}
         />
       </Section>
+
+      <Modal
+        open={editOpen}
+        onClose={() => !savingEdit && setEditOpen(false)}
+        title="Edit member details"
+        footer={
+          <>
+            <Button variant="outline" size="sm" onClick={() => setEditOpen(false)} disabled={savingEdit}>
+              Cancel
+            </Button>
+            <Button variant="dark" size="sm" icon={CheckCircle2} loading={savingEdit} onClick={saveEdit}>
+              Save Changes
+            </Button>
+          </>
+        }
+      >
+        <form onSubmit={saveEdit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Full Name</label>
+            <input
+              value={editForm.name}
+              onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
+              required
+              className="mt-1 w-full rounded-lg border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">CNIC</label>
+            <input
+              value={editForm.cnic}
+              onChange={(e) => setEditForm((f) => ({ ...f, cnic: formatCnic(e.target.value) }))}
+              placeholder="42101-1234567-1"
+              inputMode="numeric"
+              maxLength={15}
+              className="mt-1 w-full rounded-lg border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Phone</label>
+            <input
+              value={editForm.phone}
+              onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))}
+              required
+              className="mt-1 w-full rounded-lg border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Address</label>
+            <input
+              value={editForm.address}
+              onChange={(e) => setEditForm((f) => ({ ...f, address: e.target.value }))}
+              className="mt-1 w-full rounded-lg border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500"
+            />
+          </div>
+          {editError && <p className="text-sm text-red-600">{editError}</p>}
+        </form>
+      </Modal>
 
       <Modal
         open={deleteOpen}
