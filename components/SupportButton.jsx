@@ -4,9 +4,9 @@ import { useState } from "react";
 import { MessageCircle, Phone, X } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 
-const PHONE_DISPLAY = "+92 313 5448309";
-const PHONE_WHATSAPP = "923135448309"; // wa.me format: country code, no + or spaces
-const PHONE_TEL = "+923135448309";
+const PHONE_DISPLAY = "+92 307 5941906";
+const PHONE_WHATSAPP = "923075941906"; // wa.me format: country code, no + or spaces
+const PHONE_TEL = "+923075941906";
 
 /** Global floating support widget — WhatsApp + call, visible on every page. */
 export default function SupportButton() {

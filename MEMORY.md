@@ -972,6 +972,55 @@ it — which directly shaped the design below.
   account (Firebase + DB cascade) via the existing admin delete endpoint.
   `next build` clean throughout (42 routes, 9 new).
 
+## Status: New contact number, member Support page, single-user WhatsApp reminder (this session)
+
+User asked for a bulk WhatsApp broadcast feature ("send to a single user or
+all users, one click"). Explained honestly before building anything: a
+single-user pre-filled `wa.me` link is trivially possible right now (admin
+still clicks Send inside WhatsApp), but a true one-click bulk broadcast to
+ALL users with zero manual steps needs a real WhatsApp Business API
+integration (Meta Business verification, a dedicated API-only phone
+number, message template pre-approval, per-message cost) — a much bigger
+external-setup project than anything built so far, not something doable
+today. User chose: do the single-user version now, skip the bulk one.
+
+- **Contact/WhatsApp/Call number changed to 03075941906** everywhere it's
+  used as a *contact* number — `components/SupportButton.jsx`,
+  `app/page.jsx`'s `SUPPORT_*` constants, and the Donate modal's "send us
+  your receipt" number. **Deliberately left unchanged**: the actual
+  JazzCash/EasyPaisa payment account number (`0313-5448309`, Rafaqat
+  Hussain's own account) — user was explicit these are two different
+  things now, only the contact/WhatsApp number moved.
+- **New `lib/validators.js` helper**: `toWhatsAppNumber(phone)` —
+  normalizes a local Pakistani number (any format: dashes, leading 0, etc.)
+  to wa.me's international format. Replaced the inline
+  `.replace(/\D/g,"").replace(/^0/,"92")` duplicated twice in
+  `app/page.jsx` with this, and reused it for the new WhatsApp reminder
+  buttons below.
+- **New `/member/support` page** — payment details (JazzCash/EasyPaisa +
+  Bank Al Habib, reusing the `donate.*` translation keys already built for
+  the Donate modal) plus the full Terms & Conditions embedded via the
+  existing `TermsContent` component, all in one place a logged-in member
+  can always get back to. Added to `MEMBER_LINKS` in `Navbar.jsx` (new
+  "Support" tab, `nav.support` translation key both languages).
+- **Single-user WhatsApp reminder**: new `lib/whatsappTemplates.js` holds
+  `ACCOUNT_ACTIVATION_REMINDER_UR` — the exact Urdu payment-reminder
+  message the user provided verbatim (no phone number embedded in the
+  message itself, so no translation/number-swap ambiguity there). A
+  "WhatsApp Reminder" button on `/admin/members/[id]` and a compact
+  "Remind" link per-row on the `/admin/members` list both open
+  `wa.me/<member's own phone, normalized>?text=<the message>` in a new
+  tab — admin reviews and hits Send inside WhatsApp themselves.
+- **Verified live in a real browser** (not just build-checked): opened the
+  Donate modal and confirmed the receipt number shows the NEW number while
+  JazzCash still shows the OLD number side by side; opened the
+  SupportButton widget and confirmed the new number there too; registered
+  a real throwaway test account, went through the T&C gate, and confirmed
+  `/member/support` renders both the payment details (old JazzCash number
+  correctly preserved) and the full Terms & Conditions text correctly —
+  then fully deleted that test account (Firebase + DB cascade) afterward.
+  `next build` clean (43 routes, one new page).
+
 ## Status: WHAT'S NEXT
 
 1. Decide what to do with accumulated test data (USR001, USR002 — the

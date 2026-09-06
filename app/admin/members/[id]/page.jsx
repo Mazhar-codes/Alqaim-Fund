@@ -16,6 +16,7 @@ import {
   Pencil,
   CheckCircle2,
   MinusCircle,
+  MessageCircle,
 } from "lucide-react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Navbar from "@/components/Navbar";
@@ -25,7 +26,8 @@ import Modal from "@/components/Modal";
 import Reveal from "@/components/Reveal";
 import { useAuth } from "@/context/AuthContext";
 import { formatDate } from "@/lib/formatDate";
-import { formatCnic } from "@/lib/validators";
+import { formatCnic, toWhatsAppNumber } from "@/lib/validators";
+import { ACCOUNT_ACTIVATION_REMINDER_UR } from "@/lib/whatsappTemplates";
 
 function MemberLedgerContent() {
   const { authedFetch } = useAuth();
@@ -184,6 +186,15 @@ function MemberLedgerContent() {
             >
               Deduct Charge
             </Button>
+            <a
+              href={`https://wa.me/${toWhatsAppNumber(member.phone)}?text=${encodeURIComponent(ACCOUNT_ACTIVATION_REMINDER_UR)}`}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition hover:bg-green-700"
+            >
+              <MessageCircle className="h-4 w-4" />
+              WhatsApp Reminder
+            </a>
             <Button
               variant={member.status === "SUSPENDED" ? "success" : "outline"}
               size="sm"

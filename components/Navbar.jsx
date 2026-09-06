@@ -21,6 +21,7 @@ import {
   Languages,
   Gift,
   MinusCircle,
+  LifeBuoy,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
@@ -32,6 +33,7 @@ const MEMBER_LINKS = [
   { href: "/member/payments", key: "nav.payments", icon: Wallet },
   { href: "/member/loan", key: "nav.loan", icon: HeartHandshake },
   { href: "/member/transactions", key: "nav.transactions", icon: Receipt },
+  { href: "/member/support", key: "nav.support", icon: LifeBuoy },
   { href: "/member/profile", key: "nav.profile", icon: UserCircle },
 ];
 

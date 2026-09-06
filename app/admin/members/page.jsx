@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Search, Users, ArrowUpRight, Inbox } from "lucide-react";
+import { Search, Users, ArrowUpRight, Inbox, MessageCircle } from "lucide-react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Navbar from "@/components/Navbar";
 import StatusBadge from "@/components/StatusBadge";
 import Button from "@/components/Button";
 import { useAuth } from "@/context/AuthContext";
+import { toWhatsAppNumber } from "@/lib/validators";
+import { ACCOUNT_ACTIVATION_REMINDER_UR } from "@/lib/whatsappTemplates";
 
 function MembersContent() {
   const { authedFetch } = useAuth();
@@ -90,13 +92,25 @@ function MembersContent() {
                 <td className="px-4 py-2">Rs. {Number(m.totalPaid).toLocaleString()}</td>
                 <td className="px-4 py-2"><StatusBadge status={m.status} /></td>
                 <td className="px-4 py-2">
-                  <Link
-                    href={`/admin/members/${m.id}`}
-                    className="inline-flex items-center gap-1 font-medium text-brand-700 hover:underline"
-                  >
-                    View Ledger
-                    <ArrowUpRight className="h-3.5 w-3.5" />
-                  </Link>
+                  <div className="flex items-center gap-3">
+                    <Link
+                      href={`/admin/members/${m.id}`}
+                      className="inline-flex items-center gap-1 font-medium text-brand-700 hover:underline"
+                    >
+                      View Ledger
+                      <ArrowUpRight className="h-3.5 w-3.5" />
+                    </Link>
+                    <a
+                      href={`https://wa.me/${toWhatsAppNumber(m.phone)}?text=${encodeURIComponent(ACCOUNT_ACTIVATION_REMINDER_UR)}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      title="Send WhatsApp reminder"
+                      className="inline-flex items-center gap-1 font-medium text-green-700 hover:underline"
+                    >
+                      <MessageCircle className="h-3.5 w-3.5" />
+                      Remind
+                    </a>
+                  </div>
                 </td>
               </tr>
             ))}

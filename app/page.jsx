@@ -29,13 +29,17 @@ import Modal from "@/components/Modal";
 import Button from "@/components/Button";
 import FileDropzone from "@/components/FileDropzone";
 import { uploadToCloudinary } from "@/lib/cloudinary";
+import { toWhatsAppNumber } from "@/lib/validators";
 import { useLanguage } from "@/context/LanguageContext";
 
-const SUPPORT_PHONE_DISPLAY = "+92 313 5448309";
-const SUPPORT_WHATSAPP = "923135448309";
-const SUPPORT_TEL = "+923135448309";
+const SUPPORT_PHONE_DISPLAY = "+92 307 5941906";
+const SUPPORT_WHATSAPP = "923075941906";
+const SUPPORT_TEL = "+923075941906";
 
-const DONATE_RECEIPT_PHONE = "0313-5448309";
+// The "send us your receipt" WhatsApp number — this is a contact number, so
+// it uses the updated support number. The JazzCash/EasyPaisa account below
+// is a separate, unchanged payment detail (Rafaqat Hussain's own account).
+const DONATE_RECEIPT_PHONE = "0307-5941906";
 const DONATE_JAZZCASH_PHONE = "0313-5448309";
 const DONATE_IBAN = "PK88BAHL5798008100010601";
 
@@ -311,7 +315,7 @@ export default function Landing() {
             <li>
               {t("donate.step3")}{" "}
               <a
-                href={`https://wa.me/${DONATE_RECEIPT_PHONE.replace(/\D/g, "").replace(/^0/, "92")}`}
+                href={`https://wa.me/${toWhatsAppNumber(DONATE_RECEIPT_PHONE)}`}
                 target="_blank"
                 rel="noreferrer"
                 className="inline-flex items-center gap-1 font-semibold text-green-700 hover:underline"
@@ -356,7 +360,7 @@ export default function Landing() {
           </div>
 
           <a
-            href={`https://wa.me/${DONATE_RECEIPT_PHONE.replace(/\D/g, "").replace(/^0/, "92")}`}
+            href={`https://wa.me/${toWhatsAppNumber(DONATE_RECEIPT_PHONE)}`}
             target="_blank"
             rel="noreferrer"
             className="flex w-full items-center justify-center gap-2 rounded-lg bg-green-600 px-4 py-2.5 font-medium text-white transition hover:bg-green-700"
