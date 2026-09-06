@@ -871,6 +871,39 @@ changes, both fields already existed on `User`.
   after. `next build` clean (35 routes, no new routes — just PATCH body
   changes on two existing ones).
 
+## Status: Donate button on the landing page (this session)
+
+User wants anonymous (non-member) visitors to be able to support the fund
+too — asked for a "Donate" button on the home page with specific
+registration+payment instructions they pasted in Urdu.
+
+- New pink/rose "Donate" button in the hero CTA row (`app/page.jsx`,
+  alongside "View Plans"/"Member Login") opens a `Modal` with: the 3-step
+  instructions (register → deposit chosen plan's amount → send receipt),
+  a JazzCash/EasyPaisa block (Rafaqat Hussain, 0313-5448309), a Bank Al
+  Habib block (account name + IBAN `PK88BAHL5798008100010601` with a
+  one-click **Copy** button), and a "Send Receipt on WhatsApp" button
+  that deep-links to `wa.me/923135448309` (same phone, reformatted to
+  international — reused the existing `SUPPORT_WHATSAPP` conversion
+  pattern already used for the contact-support widget).
+- **Content is exactly what the user provided**, not reinterpreted —
+  didn't try to distinguish "anonymous donation" from "member
+  registration+payment" even though the copy talks about registering
+  first; that's the org's actual process for handling any contribution,
+  not something to second-guess.
+- Added a `donate` namespace to `lib/translations.js` for both `en`/`ur` —
+  the Urdu text is the user's exact wording; English is a natural
+  translation, not literal word-for-word. Phone numbers/IBAN/account name
+  stay identical in both languages (they're data, not prose) — wrapped in
+  `dir="ltr"` spans, same Unicode-bidi fix already established for phone
+  numbers in RTL context (see the Urdu/RTL session below).
+- **Verified live in a real browser** (not just build-checked): opened the
+  modal in English (renders correctly, WhatsApp/copy buttons present),
+  switched to Urdu and reopened it — confirmed full RTL mirroring
+  including the numbered list correctly right-aligning its markers.
+  `next build` clean (35 routes, no new routes — this is landing-page-only,
+  no backend involved).
+
 ## Status: WHAT'S NEXT
 
 1. Decide what to do with accumulated test data (USR001, USR002 — the
