@@ -19,12 +19,16 @@ import {
   Smartphone,
   Landmark,
   Send,
+  CheckCircle2,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import PlanCard from "@/components/PlanCard";
 import Reveal from "@/components/Reveal";
 import TiltCard from "@/components/TiltCard";
 import Modal from "@/components/Modal";
+import Button from "@/components/Button";
+import FileDropzone from "@/components/FileDropzone";
+import { uploadToCloudinary } from "@/lib/cloudinary";
 import { useLanguage } from "@/context/LanguageContext";
 
 const SUPPORT_PHONE_DISPLAY = "+92 313 5448309";
@@ -40,6 +44,11 @@ export default function Landing() {
   const [plans, setPlans] = useState([]);
   const [donateOpen, setDonateOpen] = useState(false);
   const [ibanCopied, setIbanCopied] = useState(false);
+  const [donateForm, setDonateForm] = useState({ donorName: "", donorPhone: "", amount: "", transactionId: "" });
+  const [donateFile, setDonateFile] = useState(null);
+  const [donateSubmitting, setDonateSubmitting] = useState(false);
+  const [donateError, setDonateError] = useState("");
+  const [donateSuccess, setDonateSuccess] = useState(false);
 
   function copyIban() {
     navigator.clipboard
@@ -49,6 +58,35 @@ export default function Landing() {
         setTimeout(() => setIbanCopied(false), 2000);
       })
       .catch(() => {}); // clipboard permission denied — the IBAN is still shown in plain text to select manually
+  }
+
+  function openDonate() {
+    setDonateForm({ donorName: "", donorPhone: "", amount: "", transactionId: "" });
+    setDonateFile(null);
+    setDonateError("");
+    setDonateSuccess(false);
+    setDonateOpen(true);
+  }
+
+  async function submitDonation(e) {
+    e.preventDefault();
+    setDonateError("");
+    setDonateSubmitting(true);
+    try {
+      const proofUrl = donateFile ? await uploadToCloudinary(donateFile, "donation_proofs") : null;
+      const res = await fetch("/api/donations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...donateForm, proofUrl }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to submit donation");
+      setDonateSuccess(true);
+    } catch (err) {
+      setDonateError(err.message);
+    } finally {
+      setDonateSubmitting(false);
+    }
   }
 
   useEffect(() => {
@@ -151,7 +189,7 @@ export default function Landing() {
                 {t("landing.memberLogin")}
               </Link>
               <button
-                onClick={() => setDonateOpen(true)}
+                onClick={openDonate}
                 className="group flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-pink-600 to-rose-500 px-6 py-3 font-medium text-white shadow-md shadow-pink-200 transition-all hover:-translate-y-0.5 hover:shadow-lg"
               >
                 <Gift className="h-4 w-4" />
@@ -258,6 +296,9 @@ export default function Landing() {
               <Phone className="h-4 w-4" />
               {t("support.call")}
             </a>
+            <Link href="/terms" className="hover:underline">
+              Terms &amp; Conditions
+            </Link>
           </div>
         </footer>
       </main>
@@ -323,6 +364,52 @@ export default function Landing() {
             <Send className="h-4 w-4" />
             {t("donate.sendReceipt")}
           </a>
+
+          <div className="border-t pt-4">
+            <h3 className="font-semibold text-gray-900">{t("donate.formTitle")}</h3>
+            {donateSuccess ? (
+              <p className="mt-3 flex items-center gap-1.5 rounded-lg bg-green-50 p-3 text-green-700">
+                <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
+                {t("donate.formSuccess")}
+              </p>
+            ) : (
+              <form onSubmit={submitDonation} className="mt-3 space-y-3">
+                <input
+                  placeholder={t("donate.formName")}
+                  required
+                  value={donateForm.donorName}
+                  onChange={(e) => setDonateForm((f) => ({ ...f, donorName: e.target.value }))}
+                  className="w-full rounded-lg border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500"
+                />
+                <input
+                  placeholder={t("donate.formPhone")}
+                  required
+                  value={donateForm.donorPhone}
+                  onChange={(e) => setDonateForm((f) => ({ ...f, donorPhone: e.target.value }))}
+                  className="w-full rounded-lg border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500"
+                />
+                <input
+                  type="number"
+                  placeholder={t("donate.formAmount")}
+                  required
+                  value={donateForm.amount}
+                  onChange={(e) => setDonateForm((f) => ({ ...f, amount: e.target.value }))}
+                  className="w-full rounded-lg border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500"
+                />
+                <input
+                  placeholder={t("donate.formTransactionId")}
+                  value={donateForm.transactionId}
+                  onChange={(e) => setDonateForm((f) => ({ ...f, transactionId: e.target.value }))}
+                  className="w-full rounded-lg border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500"
+                />
+                <FileDropzone file={donateFile} onChange={setDonateFile} label={t("donate.formScreenshot")} />
+                {donateError && <p className="text-sm text-red-600">{donateError}</p>}
+                <Button type="submit" loading={donateSubmitting} className="w-full">
+                  {t("donate.formSubmit")}
+                </Button>
+              </form>
+            )}
+          </div>
         </div>
       </Modal>
     </>

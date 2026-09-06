@@ -12,6 +12,7 @@ const CATEGORY_LABELS = {
   LOAN_DISBURSEMENT: "Emergency Loan Disbursed",
   LOAN_REPAYMENT: "Loan Repayment",
   ADJUSTMENT: "Adjustment",
+  CHARGE_DEDUCTION: "Charge Deducted",
 };
 
 function TransactionsContent() {

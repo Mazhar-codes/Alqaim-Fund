@@ -15,6 +15,7 @@ import {
   ExternalLink,
   Pencil,
   CheckCircle2,
+  MinusCircle,
 } from "lucide-react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Navbar from "@/components/Navbar";
@@ -42,6 +43,10 @@ function MemberLedgerContent() {
   const [editForm, setEditForm] = useState({ name: "", cnic: "", phone: "", address: "" });
   const [savingEdit, setSavingEdit] = useState(false);
   const [editError, setEditError] = useState("");
+  const [chargeOpen, setChargeOpen] = useState(false);
+  const [chargeForm, setChargeForm] = useState({ amount: "", reason: "" });
+  const [savingCharge, setSavingCharge] = useState(false);
+  const [chargeError, setChargeError] = useState("");
 
   function load() {
     authedFetch(`/api/admin/members/${params.id}`)
@@ -83,6 +88,22 @@ function MemberLedgerContent() {
       setEditError(err.message);
     } finally {
       setSavingEdit(false);
+    }
+  }
+
+  async function saveCharge(e) {
+    e.preventDefault();
+    setChargeError("");
+    setSavingCharge(true);
+    try {
+      await authedFetch(`/api/admin/members/${params.id}/charges`, { method: "POST", body: JSON.stringify(chargeForm) });
+      setMessage("Charge deducted.");
+      setChargeOpen(false);
+      load();
+    } catch (err) {
+      setChargeError(err.message);
+    } finally {
+      setSavingCharge(false);
     }
   }
 
@@ -150,6 +171,18 @@ function MemberLedgerContent() {
               }}
             >
               Edit
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              icon={MinusCircle}
+              onClick={() => {
+                setChargeForm({ amount: "", reason: "" });
+                setChargeError("");
+                setChargeOpen(true);
+              }}
+            >
+              Deduct Charge
             </Button>
             <Button
               variant={member.status === "SUSPENDED" ? "success" : "outline"}
@@ -229,6 +262,18 @@ function MemberLedgerContent() {
               ) : (
                 "—"
               ),
+          }}
+        />
+      </Section>
+
+      <Section title="Charges (Manual Deductions)">
+        <Table
+          rows={member.charges}
+          cols={["createdAt", "amount", "reason"]}
+          render={{
+            createdAt: (v) => formatDate(v),
+            amount: (v) => <span className="font-medium text-amber-700">Rs. {Number(v).toLocaleString()}</span>,
+            reason: (v) => v || "—",
           }}
         />
       </Section>
@@ -324,6 +369,51 @@ function MemberLedgerContent() {
             />
           </div>
           {editError && <p className="text-sm text-red-600">{editError}</p>}
+        </form>
+      </Modal>
+
+      <Modal
+        open={chargeOpen}
+        onClose={() => !savingCharge && setChargeOpen(false)}
+        title="Deduct a charge"
+        footer={
+          <>
+            <Button variant="outline" size="sm" onClick={() => setChargeOpen(false)} disabled={savingCharge}>
+              Cancel
+            </Button>
+            <Button variant="dark" size="sm" icon={MinusCircle} loading={savingCharge} onClick={saveCharge}>
+              Deduct
+            </Button>
+          </>
+        }
+      >
+        <form onSubmit={saveCharge} className="space-y-4">
+          <p className="text-sm text-gray-600">
+            This deducts from <span className="font-semibold text-gray-900">{member.name}</span>'s accumulated
+            balance as a manual charge. It does NOT affect their installment progress or totals — it's recorded
+            separately, and they'll see a note about it on their own Transactions page.
+          </p>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Amount</label>
+            <input
+              type="number"
+              required
+              min="1"
+              value={chargeForm.amount}
+              onChange={(e) => setChargeForm((f) => ({ ...f, amount: e.target.value }))}
+              className="mt-1 w-full rounded-lg border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Reason (optional)</label>
+            <input
+              value={chargeForm.reason}
+              onChange={(e) => setChargeForm((f) => ({ ...f, reason: e.target.value }))}
+              placeholder="e.g. Annual service charge"
+              className="mt-1 w-full rounded-lg border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500"
+            />
+          </div>
+          {chargeError && <p className="text-sm text-red-600">{chargeError}</p>}
         </form>
       </Modal>
 

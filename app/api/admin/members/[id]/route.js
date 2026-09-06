@@ -18,6 +18,7 @@ export async function GET(request, { params }) {
         payments: { orderBy: { createdAt: "desc" } },
         loanRequests: { orderBy: { createdAt: "desc" }, include: { repayments: true } },
         transactions: { orderBy: { createdAt: "desc" } },
+        charges: { orderBy: { createdAt: "desc" } },
       },
     });
     if (!member) return NextResponse.json({ error: "Member not found" }, { status: 404 });

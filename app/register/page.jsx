@@ -3,10 +3,11 @@
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { PartyPopper, UserPlus, AlertCircle } from "lucide-react";
+import { PartyPopper, UserPlus, AlertCircle, FileCheck2 } from "lucide-react";
 import { firebaseAuth } from "@/lib/firebaseClient";
 import Navbar from "@/components/Navbar";
 import Button from "@/components/Button";
+import TermsContent from "@/components/TermsContent";
 import { formatCnic, isGmailAddress } from "@/lib/validators";
 import { useLanguage } from "@/context/LanguageContext";
 
@@ -27,6 +28,28 @@ function RegisterForm() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [termsAgreed, setTermsAgreed] = useState(false);
+  const [termsConfirmed, setTermsConfirmed] = useState(false);
+  const [acceptingTerms, setAcceptingTerms] = useState(false);
+  const [termsError, setTermsError] = useState("");
+
+  async function acceptTerms() {
+    setTermsError("");
+    setAcceptingTerms(true);
+    try {
+      const idToken = await firebaseAuth.currentUser.getIdToken();
+      const res = await fetch("/api/auth/accept-terms", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
+      });
+      if (!res.ok) throw new Error("Failed to record your acceptance — please try again");
+      setTermsConfirmed(true);
+    } catch (err) {
+      setTermsError(err.message);
+    } finally {
+      setAcceptingTerms(false);
+    }
+  }
 
   useEffect(() => {
     fetch("/api/plans")
@@ -91,7 +114,46 @@ function RegisterForm() {
     }
   }
 
-  if (success) {
+  if (success && !termsConfirmed) {
+    return (
+      <>
+        <Navbar variant="public" />
+        <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
+          <div className="flex items-center gap-2">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-100 text-brand-700">
+              <FileCheck2 className="h-5 w-5" />
+            </span>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">One Last Step</h1>
+              <p className="text-sm text-gray-500">Please review and accept the Terms & Conditions to continue.</p>
+            </div>
+          </div>
+
+          <div className="mt-6 max-h-[50vh] overflow-y-auto rounded-2xl border border-gray-200 bg-white p-6 shadow-sm sm:p-8">
+            <TermsContent />
+          </div>
+
+          <div className="mt-4 rounded-xl border bg-white p-4 shadow-sm">
+            <label className="flex items-start gap-2 text-sm text-gray-700">
+              <input
+                type="checkbox"
+                checked={termsAgreed}
+                onChange={(e) => setTermsAgreed(e.target.checked)}
+                className="mt-0.5 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+              />
+              I have read and agree to the AGS Family Support Fund Terms & Conditions above.
+            </label>
+            {termsError && <p className="mt-2 text-sm text-red-600">{termsError}</p>}
+            <Button onClick={acceptTerms} loading={acceptingTerms} disabled={!termsAgreed} className="mt-4 w-full">
+              I Agree & Continue
+            </Button>
+          </div>
+        </main>
+      </>
+    );
+  }
+
+  if (success && termsConfirmed) {
     return (
       <>
         <Navbar variant="public" />

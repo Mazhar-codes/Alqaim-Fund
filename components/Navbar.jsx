@@ -19,6 +19,8 @@ import {
   X,
   Home,
   Languages,
+  Gift,
+  MinusCircle,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
@@ -38,6 +40,8 @@ const ADMIN_LINKS = [
   { href: "/admin/members", key: "nav.members", icon: Users },
   { href: "/admin/payments", key: "nav.paymentQueue", icon: ClipboardCheck },
   { href: "/admin/loans", key: "nav.loanQueue", icon: HeartHandshake },
+  { href: "/admin/donations", key: "nav.donations", icon: Gift },
+  { href: "/admin/charges", key: "nav.charges", icon: MinusCircle },
   { href: "/admin/reports", key: "nav.reports", icon: FileBarChart },
   { href: "/admin/settings", key: "nav.settings", icon: Settings },
 ];

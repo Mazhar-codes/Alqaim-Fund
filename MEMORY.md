@@ -904,6 +904,74 @@ registration+payment instructions they pasted in Urdu.
   `next build` clean (35 routes, no new routes — this is landing-page-only,
   no backend involved).
 
+## Status: Donations record, manual Charges, Terms & Conditions gate (this session)
+
+Three features requested together. Clarified the money-affecting one via
+AskUserQuestion before touching anything — user's answer: it's a MANUAL
+admin action (not automatic on first payment), it must NOT change the
+member's actual paid/owed totals, and the member should see a note about
+it — which directly shaped the design below.
+
+- **Donations**: new `Donation` model (donorName, donorPhone, amount,
+  transactionId?, proofUrl?) — deliberately NOT linked to `User`, since
+  donors don't need an account. `POST /api/donations` is public (no auth)
+  — the landing page's "Donate" modal now has a real submission form
+  (name/phone/amount/transaction ID/screenshot via the existing
+  `FileDropzone` + Cloudinary `donation_proofs` folder) below the existing
+  payment instructions. `GET /api/admin/donations` (admin-only) backs a
+  new `/admin/donations` page listing every donation with its screenshot.
+- **Charges** (the manual-deduction feature): new `Charge` model (userId,
+  amount, reason?) + new `TransactionCategory.CHARGE_DEDUCTION`. Admin
+  triggers it from a member's own page (`/admin/members/[id]` — new
+  "Deduct Charge" button/modal, amount + optional reason, free-form
+  amount, NOT hardcoded to 50% — that was the original ask but the user's
+  clarification dropped the fixed-percentage idea in favor of admin
+  typing whatever amount). **Critically**: `POST
+  /api/admin/members/[id]/charges` does NOT touch `user.totalPaid` or any
+  `Installment` — it only creates the `Charge` row and appends a
+  `CHARGE_DEDUCTION` Transaction ledger entry (`direction: OUT`,
+  description "Charges deducted: <reason>"). That Transaction is what
+  satisfies "notify the member" — it already shows up on their own
+  `/member/transactions` page with a clear description, no new
+  notification system needed. New `/admin/charges` page lists every
+  charge fund-wide (across all members); the member detail page also
+  shows that one member's own Charges section inline. Both `charges` and
+  `donations` nav links added to the admin Navbar.
+- **Terms & Conditions gate**: new `User.termsAcceptedAt DateTime?`
+  (nullable — existing members are NOT retroactively forced to accept,
+  per "when a person **now** registers"). `lib/termsAndConditions.js`
+  holds the full 16-clause text the user provided — content is unchanged
+  in substance; the only edit was adding an explicit acceptance
+  preamble/closing (the actual legal mechanism a click-to-accept flow
+  needs, which was structurally the one thing missing). Shared
+  `components/TermsContent.jsx` renders it, reused by both the
+  registration gate and a new standalone `/terms` page (linked from the
+  landing page footer). `app/register/page.jsx`'s success flow now has
+  TWO stages: right after `createUserWithEmailAndPassword` +
+  `/api/auth/register` succeed, a mandatory `if (success &&
+  !termsConfirmed)` screen shows the full text + a checkbox + "I Agree &
+  Continue" (disabled until checked) — only after `POST
+  /api/auth/accept-terms` succeeds does the familiar "Welcome
+  aboard, your Member ID is X" screen appear. New public endpoint
+  requires a real Firebase ID token (the client is already signed in at
+  this point from `createUserWithEmailAndPassword`, so this works
+  without any new auth plumbing).
+- **Verified thoroughly against the real Neon DB** (every write reverted
+  or deleted afterward, no test data left behind): submitted a real test
+  donation via curl and confirmed it appeared in the admin donations API,
+  then deleted it; deducted a real test charge on a real member (USR014)
+  and confirmed BOTH that it showed up correctly in `/admin/charges` +
+  that member's transactions AND that `totalPaid`/`paidInstallments`/every
+  installment stayed completely untouched, then deleted the Charge and
+  its Transaction row; called accept-terms as a real member token and
+  confirmed `termsAcceptedAt` was set, then reverted it to null. Then ran
+  the FULL real flow through an actual browser (not just API calls):
+  registered a genuine throwaway account end-to-end, watched the T&C gate
+  correctly block with the button disabled until the checkbox was ticked,
+  confirmed acceptance recorded in the DB, then fully deleted that test
+  account (Firebase + DB cascade) via the existing admin delete endpoint.
+  `next build` clean throughout (42 routes, 9 new).
+
 ## Status: WHAT'S NEXT
 
 1. Decide what to do with accumulated test data (USR001, USR002 — the

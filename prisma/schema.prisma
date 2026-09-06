@@ -65,6 +65,7 @@ enum TransactionCategory {
   LOAN_DISBURSEMENT
   LOAN_REPAYMENT
   ADJUSTMENT
+  CHARGE_DEDUCTION
 }
 
 model Plan {
@@ -98,6 +99,7 @@ model User {
   status           UserStatus @default(ACTIVE)
   paidInstallments Int        @default(0)
   totalPaid        Decimal    @default(0) @db.Decimal(14, 2)
+  termsAcceptedAt  DateTime? // set once, right after registration, when the member accepts the Terms & Conditions
   createdAt        DateTime   @default(now())
   updatedAt        DateTime   @updatedAt
 
@@ -106,8 +108,41 @@ model User {
   payments     Payment[]
   loanRequests LoanRequest[]
   transactions Transaction[]
+  charges      Charge[]
 
   @@map("users")
+}
+
+// A manual admin-initiated deduction from a member's accumulated balance
+// (e.g. an administrative/service charge) — deliberately does NOT touch
+// User.totalPaid or any Installment: the member's plan progress stays
+// exactly as it was, this is a separate side record. Also appends a
+// CHARGE_DEDUCTION Transaction ledger row so the member sees a clear note
+// about it on their own Transactions page.
+model Charge {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount    Decimal  @db.Decimal(12, 2)
+  reason    String?  @db.Text
+  createdAt DateTime @default(now())
+
+  @@map("charges")
+}
+
+// A donation from anyone — member or fully anonymous visitor — submitted
+// from the public "Donate" button on the landing page. Deliberately not
+// linked to a User: donors don't need an account.
+model Donation {
+  id            Int      @id @default(autoincrement())
+  donorName     String
+  donorPhone    String
+  amount        Decimal  @db.Decimal(12, 2)
+  transactionId String?
+  proofUrl      String?
+  createdAt     DateTime @default(now())
+
+  @@map("donations")
 }
 
 model Installment {
