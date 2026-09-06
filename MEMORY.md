@@ -621,6 +621,52 @@ in admin, and a "email already in use" error after deleting an account.
 - Not yet committed/pushed — ask the user before pushing, per past sessions'
   pattern of confirming before Vercel-triggering pushes.
 
+## Status: Member ID remember/recovery (this session)
+
+User asked whether a member could be helped to remember their Member ID
+(they log in with MemberID, not email, so browser username-autofill wasn't
+obviously wired up) and whether autofill was possible — agreed to build
+both a device-autofill fix and a real "forgot my Member ID" recovery flow.
+
+- **Autofill fixes**: added `name`/`autoComplete` attributes to the
+  actual login-identifier fields site-wide — `autoComplete="username"` +
+  `autoComplete="current-password"` on both `/login` and `/admin/login`;
+  `autoComplete="username email"` / `"new-password"` / `"name"` / `"tel"` /
+  `"street-address"` on the `/register` form fields. This is what lets
+  Chrome/Safari/etc. actually offer to save+autofill the MemberID the same
+  way they do for any other site.
+- **Device-remembered MemberID** (`app/login/page.jsx`): on successful
+  login, the MemberID is saved to `localStorage` under `ags_last_member_id`
+  and pre-fills the field on next visit — a fallback for whenever the
+  browser's own password manager doesn't catch it (private browsing,
+  autofill declined, etc). Also set immediately after a successful
+  registration (`app/register/page.jsx`) so it's pre-filled the very first
+  time they go to log in. Wrapped in try/catch — `localStorage` can throw
+  in some browser privacy modes, and this is a pure convenience, never
+  worth failing login/register over.
+- **Real "Forgot your Member ID?" recovery** — new public endpoint
+  `POST /api/auth/recover-memberid` (`{cnic, phone}` → `{memberId}`).
+  **Important constraint that shaped the design**: there is NO live
+  email/SMS provider wired up (`lib/notify.js` is still a stub — see
+  "WHAT'S NEXT" below), so this can't email/text the result the way
+  password-reset does. Instead it requires BOTH the CNIC and phone number
+  on file to match before revealing the MemberID directly in the JSON
+  response — two factors together are what makes this safe enough to
+  return synchronously without a provider (a single field, e.g. phone
+  alone, would let someone enumerate/probe for accounts). A "Forgot your
+  Member ID?" link + `Modal` on `/login` (next to "Forgot password?") asks
+  for CNIC (auto-dash via `formatCnic`) + phone, calls the endpoint, and
+  shows the MemberID on screen on match. **If a real email/SMS provider
+  gets wired up later, revisit this — emailing the result instead of
+  displaying it on-screen would be strictly more secure once that's
+  possible.**
+- Verified live against the real Neon DB via `next dev`: fetched a real
+  member's CNIC+phone (read-only, no writes) and confirmed the endpoint
+  returns their correct MemberID; confirmed a non-matching pair returns the
+  generic "not found" error. `next build` clean (34 routes, includes the
+  new API route). Not yet committed/pushed as of writing this entry — see
+  whether the same message below still says so.
+
 ## Status: WHAT'S NEXT
 
 1. Decide what to do with accumulated test data (USR001, USR002 — the

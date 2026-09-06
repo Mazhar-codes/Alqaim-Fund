@@ -80,6 +80,8 @@ export default function AdminLogin() {
             <div>
               <label className="block text-sm font-medium text-gray-700">{t("adminLogin.username")}</label>
               <input
+                name="username"
+                autoComplete="username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="admin"
@@ -91,6 +93,8 @@ export default function AdminLogin() {
               <label className="block text-sm font-medium text-gray-700">{t("adminLogin.password")}</label>
               <input
                 type="password"
+                name="password"
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required

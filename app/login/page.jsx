@@ -1,14 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
-import { LogIn, AlertCircle } from "lucide-react";
+import { LogIn, AlertCircle, HelpCircle } from "lucide-react";
 import { firebaseAuth } from "@/lib/firebaseClient";
 import Navbar from "@/components/Navbar";
 import Button from "@/components/Button";
 import Modal from "@/components/Modal";
+import { formatCnic } from "@/lib/validators";
 import { useLanguage } from "@/context/LanguageContext";
+
+// Remembers the last-used Member ID on this device/browser so the login form
+// pre-fills it next time — a fallback for whenever the browser's own
+// password-manager autofill doesn't kick in.
+const LAST_MEMBER_ID_KEY = "ags_last_member_id";
 
 export default function Login() {
   const router = useRouter();
@@ -22,6 +28,42 @@ export default function Login() {
   const [resetMessage, setResetMessage] = useState("");
   const [resetError, setResetError] = useState("");
   const [resetSubmitting, setResetSubmitting] = useState(false);
+  const [recoverOpen, setRecoverOpen] = useState(false);
+  const [recoverCnic, setRecoverCnic] = useState("");
+  const [recoverPhone, setRecoverPhone] = useState("");
+  const [recoverResult, setRecoverResult] = useState(null);
+  const [recoverError, setRecoverError] = useState("");
+  const [recoverSubmitting, setRecoverSubmitting] = useState(false);
+
+  useEffect(() => {
+    try {
+      const remembered = localStorage.getItem(LAST_MEMBER_ID_KEY);
+      if (remembered) setMemberId(remembered);
+    } catch {
+      // localStorage can throw in private-browsing/blocked-storage contexts — fine to skip.
+    }
+  }, []);
+
+  async function handleRecover(e) {
+    e.preventDefault();
+    setRecoverError("");
+    setRecoverResult(null);
+    setRecoverSubmitting(true);
+    try {
+      const res = await fetch("/api/auth/recover-memberid", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cnic: recoverCnic, phone: recoverPhone }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "No matching account found");
+      setRecoverResult(data.memberId);
+    } catch (err) {
+      setRecoverError(err.message);
+    } finally {
+      setRecoverSubmitting(false);
+    }
+  }
 
   async function handleReset(e) {
     e.preventDefault();
@@ -56,6 +98,12 @@ export default function Login() {
       const cred = await signInWithEmailAndPassword(firebaseAuth, lookupData.email, password);
       const tokenResult = await cred.user.getIdTokenResult();
 
+      try {
+        localStorage.setItem(LAST_MEMBER_ID_KEY, memberId.trim().toUpperCase());
+      } catch {
+        // ignore — same private-browsing/blocked-storage case as above
+      }
+
       router.push(tokenResult.claims.role === "admin" ? "/admin" : "/member/dashboard");
     } catch (err) {
       setError(err.message.replace("Firebase: ", ""));
@@ -76,10 +124,12 @@ export default function Login() {
             <h1 className="text-2xl font-bold text-gray-900">{t("login.title")}</h1>
           </div>
 
-          <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+          <form onSubmit={handleSubmit} className="mt-6 space-y-4" autoComplete="on">
             <div>
               <label className="block text-sm font-medium text-gray-700">{t("login.memberId")}</label>
               <input
+                name="username"
+                autoComplete="username"
                 value={memberId}
                 onChange={(e) => setMemberId(e.target.value)}
                 placeholder="USR001"
@@ -91,6 +141,8 @@ export default function Login() {
               <label className="block text-sm font-medium text-gray-700">{t("login.password")}</label>
               <input
                 type="password"
+                name="password"
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -103,7 +155,21 @@ export default function Login() {
                 {error}
               </p>
             )}
-            <div className="text-right">
+            <div className="flex items-center justify-between text-sm">
+              <button
+                type="button"
+                onClick={() => {
+                  setRecoverCnic("");
+                  setRecoverPhone("");
+                  setRecoverResult(null);
+                  setRecoverError("");
+                  setRecoverOpen(true);
+                }}
+                className="flex items-center gap-1 font-medium text-gray-500 hover:underline"
+              >
+                <HelpCircle className="h-3.5 w-3.5" />
+                {t("login.forgotMemberId")}
+              </button>
               <button
                 type="button"
                 onClick={() => {
@@ -112,7 +178,7 @@ export default function Login() {
                   setResetError("");
                   setResetOpen(true);
                 }}
-                className="text-sm font-medium text-brand-700 hover:underline"
+                className="font-medium text-brand-700 hover:underline"
               >
                 {t("login.forgotPassword")}
               </button>
@@ -144,6 +210,47 @@ export default function Login() {
           {resetError && <p className="text-sm text-red-600">{resetError}</p>}
           <Button type="submit" loading={resetSubmitting} className="w-full">
             {resetSubmitting ? t("login.resetSending") : t("login.resetSend")}
+          </Button>
+        </form>
+      </Modal>
+
+      <Modal
+        open={recoverOpen}
+        onClose={() => !recoverSubmitting && setRecoverOpen(false)}
+        title={t("login.recoverIdTitle")}
+      >
+        <form onSubmit={handleRecover} className="space-y-4">
+          <p className="text-sm text-gray-600">{t("login.recoverIdBody")}</p>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">{t("login.recoverIdCnic")}</label>
+            <input
+              value={recoverCnic}
+              onChange={(e) => setRecoverCnic(formatCnic(e.target.value))}
+              placeholder="42101-1234567-1"
+              inputMode="numeric"
+              maxLength={15}
+              required
+              className="mt-1 w-full rounded-lg border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">{t("login.recoverIdPhone")}</label>
+            <input
+              value={recoverPhone}
+              onChange={(e) => setRecoverPhone(e.target.value)}
+              required
+              className="mt-1 w-full rounded-lg border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500"
+            />
+          </div>
+          {recoverResult && (
+            <p className="text-sm text-green-700">
+              {t("login.recoverIdFound")}{" "}
+              <span className="rounded-md bg-brand-50 px-2 py-1 font-mono font-bold text-brand-700">{recoverResult}</span>
+            </p>
+          )}
+          {recoverError && <p className="text-sm text-red-600">{recoverError}</p>}
+          <Button type="submit" loading={recoverSubmitting} className="w-full">
+            {recoverSubmitting ? t("login.recoverIdSubmitting") : t("login.recoverIdSubmit")}
           </Button>
         </form>
       </Modal>

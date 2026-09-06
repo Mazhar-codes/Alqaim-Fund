@@ -77,6 +77,12 @@ function RegisterForm() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Registration failed");
 
+      try {
+        localStorage.setItem("ags_last_member_id", data.memberId);
+      } catch {
+        // ignore — private-browsing/blocked-storage contexts just skip the convenience
+      }
+
       setSuccess(data.memberId);
     } catch (err) {
       setError(err.message.replace("Firebase: ", ""));
@@ -121,7 +127,13 @@ function RegisterForm() {
           </div>
 
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-            <Field label={t("register.fullName")} value={form.name} onChange={update("name")} required />
+            <Field
+              label={t("register.fullName")}
+              value={form.name}
+              onChange={update("name")}
+              autoComplete="name"
+              required
+            />
             <Field
               label={t("register.cnic")}
               value={form.cnic}
@@ -131,11 +143,18 @@ function RegisterForm() {
               maxLength={15}
               required
             />
-            <Field label={t("register.phone")} value={form.phone} onChange={update("phone")} required />
-            <Field label={t("register.address")} value={form.address} onChange={update("address")} />
+            <Field
+              label={t("register.phone")}
+              value={form.phone}
+              onChange={update("phone")}
+              autoComplete="tel"
+              required
+            />
+            <Field label={t("register.address")} value={form.address} onChange={update("address")} autoComplete="street-address" />
             <Field
               label={t("register.email")}
               type="email"
+              autoComplete="username email"
               value={form.email}
               onChange={update("email")}
               placeholder="you@gmail.com"
@@ -144,6 +163,7 @@ function RegisterForm() {
             <Field
               label={t("register.password")}
               type="password"
+              autoComplete="new-password"
               value={form.password}
               onChange={update("password")}
               required
