@@ -68,7 +68,7 @@ export default function Navbar({ variant = "public" }) {
           <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-brand-600 to-brand-800 text-white shadow-sm">
             <HandCoins className="h-4.5 w-4.5" />
           </span>
-          Alqaim Fund
+          AGS Fund
         </Link>
 
         <div className="hidden items-center gap-1 text-sm lg:flex">

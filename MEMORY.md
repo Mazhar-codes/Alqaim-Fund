@@ -547,6 +547,80 @@ a "Plan Amount" column, no paid-amount column at all. Fixed both:
   systematic sweep was done up front. Do the sweep up front next time a
   similar bug class is found.
 
+## Status: Rebrand to AGS Fund + payment/Firebase bug fixes (this session)
+
+User reported four things from live screenshots in one message: rebrand,
+payments auto-verifying with no way to review them, screenshots not showing
+in admin, and a "email already in use" error after deleting an account.
+
+- **Rebrand**: "Alqaim Fund" → "**AGS Fund**" in `app/layout.jsx` (metadata
+  title), `app/page.jsx` (footer), `components/Navbar.jsx` (logo text),
+  `README.md`. Did NOT touch internal/non-user-facing identifiers
+  (`package.json` name, `ADMIN_SEED_EMAIL` default `admin@alqaimfund.local`,
+  Neon/GitHub project names) — those are infra labels, not brand text.
+- **Removed payment auto-verification entirely** (this was the real root
+  cause of both the "why is it verified automatically" complaint AND the
+  "payments/screenshots not showing in admin" complaint — auto-approved
+  payments never entered the `PENDING` queue the admin payments page reads,
+  so their screenshots were invisible there by design, not a bug in the
+  admin page itself). `app/api/member/payments/route.js` POST now always
+  creates the payment as `status: "PENDING"` and returns "Payment uploaded —
+  pending admin verification." unconditionally. Removed the now-dead
+  `passesAutoVerification()` from `lib/payments.js`. Every member upload
+  (with its screenshot/proofUrl) now always lands in `/admin/payments` for
+  the admin to approve/reject — verified the admin page's existing
+  PENDING-status query + proof "View" link already handle this correctly,
+  no admin-side UI changes were needed.
+- **Fixed a real orphaned-Firebase-account bug** behind the
+  `auth/email-already-in-use` error: `app/register/page.jsx` calls
+  `createUserWithEmailAndPassword` client-side BEFORE `/api/auth/register`
+  creates the matching Prisma `User` row. If that API call fails for ANY
+  reason (invalid plan, duplicate CNIC/`P2002`, any DB error), the Firebase
+  Auth user was never rolled back — permanently orphaned (no Prisma row, so
+  never visible/deletable from the admin panel) and the email stuck on
+  `auth/email-already-in-use` forever. This was NOT actually about the
+  admin delete-account feature (that already correctly calls
+  `adminAuth.deleteUser` — see the "Registration/eligibility/delete-account"
+  session below) — it was a failed *registration* attempt that left a
+  stray Firebase user with no way to clean it up.
+  - **Fix** (`app/api/auth/register/route.js`): if the Prisma `User` row is
+    never created (invalid plan, or any error inside the `$transaction`),
+    the just-created Firebase user is now deleted before returning the
+    error. Once the Prisma row DOES exist, a later failure (setting the
+    role claim, sending the MemberID notification) no longer deletes the
+    Firebase user — that would orphan a *valid* member record instead
+    (those two calls are now in their own try/catch that just logs).
+  - **Also hardened** `app/api/admin/members/[id]/route.js` DELETE: it used
+    to swallow ALL Firebase `deleteUser` errors with a warning and delete
+    the DB row anyway. Now only `auth/user-not-found` is treated as
+    harmless — any other Firebase error aborts the delete and returns it to
+    the admin (502), so the DB row and the Firebase user can never
+    silently drift apart again the way they did before.
+  - **Cleaned up the specific stuck account** the user hit
+    (`beeb93918@gmail.com`) via a one-off script (confirmed it was a real
+    orphan — Firebase user existed, no matching Prisma row — before
+    deleting): that email is free to register again now.
+- **Logout and forgot-password**: logout already existed (`Navbar.jsx`,
+  shown whenever `firebaseUser` is set, both member and admin variants) —
+  no change needed, just confirmed. **Added forgot-password** (new, wasn't
+  there before): a "Forgot password?" link + `Modal` on both `/login` and
+  `/admin/login` that looks up the email via the existing
+  `/api/auth/lookup?loginId=` endpoint, then calls Firebase's
+  `sendPasswordResetEmail` — same "MemberID first, email under the hood"
+  pattern the rest of auth uses. Always shows the same generic success
+  message regardless of whether the account exists (don't leak which
+  MemberIDs are real). Added `login.forgotPassword`/`resetTitle`/etc. and
+  `adminLogin.*` equivalents to `lib/translations.js` (both `en` and `ur`).
+- Verified: `next build` clean (33 routes), then a real `next dev` smoke
+  test — confirmed "AGS Fund" renders on the homepage with zero remaining
+  "Alqaim Fund" text, and "Forgot password" renders on both `/login` and
+  `/admin/login`. Did not live-test the full payment-upload → admin-approve
+  round trip this session (would need a real member session + Cloudinary
+  upload) — logic-level fix is straightforward and build-verified, but
+  worth a real end-to-end pass if anything looks off after deploy.
+- Not yet committed/pushed — ask the user before pushing, per past sessions'
+  pattern of confirming before Vercel-triggering pushes.
+
 ## Status: WHAT'S NEXT
 
 1. Decide what to do with accumulated test data (USR001, USR002 — the

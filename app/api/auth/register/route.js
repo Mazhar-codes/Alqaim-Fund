@@ -44,14 +44,24 @@ export async function POST(request) {
   }
 
   const plan = await prisma.plan.findUnique({ where: { id: Number(planId) } });
-  if (!plan) return NextResponse.json({ error: "Invalid plan selected" }, { status: 400 });
+  if (!plan) {
+    // The Firebase Auth user was already created client-side before this
+    // route was hit — if we bail out now without a matching Prisma row,
+    // that Firebase user is orphaned forever (never deletable from the
+    // admin panel, since it has no member record), and the email becomes
+    // permanently stuck on "auth/email-already-in-use" for any future
+    // registration attempt. Clean it up before returning the error.
+    await adminAuth.deleteUser(decoded.uid).catch(() => {});
+    return NextResponse.json({ error: "Invalid plan selected" }, { status: 400 });
+  }
 
+  let user;
   try {
     const memberId = await generateNextMemberId();
     const joinDate = new Date();
     const schedule = buildInstallmentSchedule(joinDate, plan.tenureMonths);
 
-    const user = await prisma.$transaction(async (tx) => {
+    user = await prisma.$transaction(async (tx) => {
       const created = await tx.user.create({
         data: {
           firebaseUid: decoded.uid,
@@ -77,16 +87,32 @@ export async function POST(request) {
 
       return created;
     });
-
-    await adminAuth.setCustomUserClaims(decoded.uid, { role: "member" });
-    await notifyMemberId({ name, phone, email: decoded.email, memberId });
-
-    return NextResponse.json({ memberId: user.memberId }, { status: 201 });
   } catch (err) {
+    // Same orphan risk as above: the Firebase user already exists, but the
+    // Prisma row was never created for it — delete it so the email isn't
+    // stuck unusable for a future registration attempt.
+    await adminAuth.deleteUser(decoded.uid).catch(() => {});
     if (err.code === "P2002") {
       return NextResponse.json({ error: "CNIC or email already registered" }, { status: 409 });
     }
     console.error(err);
     return NextResponse.json({ error: "Registration failed" }, { status: 500 });
   }
+
+  // The Prisma row now exists — from here on, a failure must NOT delete the
+  // Firebase user (that would orphan a valid member record with no way to
+  // log in). Just log and continue; the member can still log in and use the
+  // account even if the role claim or MemberID notification didn't fire.
+  try {
+    await adminAuth.setCustomUserClaims(decoded.uid, { role: "member" });
+  } catch (err) {
+    console.error("Failed to set role claim for", decoded.uid, err);
+  }
+  try {
+    await notifyMemberId({ name, phone, email: decoded.email, memberId: user.memberId });
+  } catch (err) {
+    console.error("Failed to send MemberID notification for", user.memberId, err);
+  }
+
+  return NextResponse.json({ memberId: user.memberId }, { status: 201 });
 }

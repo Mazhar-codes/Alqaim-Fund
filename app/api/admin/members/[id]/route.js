@@ -77,8 +77,19 @@ export async function DELETE(request, { params }) {
     try {
       await getAdminAuth().deleteUser(member.firebaseUid);
     } catch (err) {
-      // Already gone from Firebase, or never existed there — fine, proceed with the DB delete.
-      console.warn(`Firebase user delete failed for ${member.firebaseUid}:`, err.message);
+      // "Already gone" is fine (e.g. deleted directly in the Firebase
+      // console previously) — proceed with the DB delete either way. Any
+      // OTHER Firebase error must be surfaced, not swallowed: silently
+      // continuing would delete the DB row while the Firebase Auth user
+      // (and its email) stays alive, permanently blocking that email from
+      // ever registering again with "auth/email-already-in-use".
+      if (err.code !== "auth/user-not-found") {
+        console.error(`Firebase user delete failed for ${member.firebaseUid}:`, err);
+        return NextResponse.json(
+          { error: `Failed to delete Firebase account: ${err.message}. Member NOT deleted — try again.` },
+          { status: 502 }
+        );
+      }
     }
 
     await prisma.user.delete({ where: { id } });

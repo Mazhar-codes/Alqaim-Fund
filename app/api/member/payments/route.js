@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireUser, AuthError } from "@/lib/auth";
-import { applyApprovedPayment, passesAutoVerification } from "@/lib/payments";
 
 export async function GET(request) {
   try {
@@ -20,8 +19,8 @@ export async function GET(request) {
 
 /**
  * Body: { amount, paymentDate, transactionId, proofUrl }
- * proofUrl is a Firebase Storage download URL — the client uploads the
- * screenshot directly to Storage and only sends us the resulting URL.
+ * proofUrl is a Cloudinary secure_url — the client uploads the screenshot
+ * directly to Cloudinary and only sends us the resulting URL.
  */
 export async function POST(request) {
   try {
@@ -32,46 +31,23 @@ export async function POST(request) {
       return NextResponse.json({ error: "amount, paymentDate and proofUrl are required" }, { status: 400 });
     }
 
-    const oldestUnpaid = await prisma.installment.findFirst({
-      where: { userId: user.id, status: { not: "PAID" } },
-      orderBy: { installmentNumber: "asc" },
-    });
-
-    const autoApprove = passesAutoVerification(oldestUnpaid, amount, paymentDate);
-
-    const payment = await prisma.$transaction(async (tx) => {
-      const created = await tx.payment.create({
-        data: {
-          userId: user.id,
-          amount,
-          paymentDate: new Date(paymentDate),
-          transactionId: transactionId || null,
-          proofUrl,
-          status: autoApprove ? "APPROVED" : "PENDING",
-          verifiedAutomatically: autoApprove,
-        },
-      });
-
-      if (autoApprove) {
-        await applyApprovedPayment(tx, {
-          userId: user.id,
-          amount,
-          paymentDate: new Date(paymentDate),
-          transactionId,
-          proofUrl,
-        });
-      }
-
-      return created;
+    // Every member-submitted payment goes to the admin verification queue —
+    // no auto-approval. Admin must review the screenshot/transaction ID and
+    // approve or reject it via /admin/payments before it's applied.
+    const payment = await prisma.payment.create({
+      data: {
+        userId: user.id,
+        amount,
+        paymentDate: new Date(paymentDate),
+        transactionId: transactionId || null,
+        proofUrl,
+        status: "PENDING",
+        verifiedAutomatically: false,
+      },
     });
 
     return NextResponse.json(
-      {
-        payment,
-        message: autoApprove
-          ? "Payment verified automatically and applied."
-          : "Payment uploaded — pending admin verification.",
-      },
+      { payment, message: "Payment uploaded — pending admin verification." },
       { status: 201 }
     );
   } catch (err) {

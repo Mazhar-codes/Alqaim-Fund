@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { signInWithEmailAndPassword, signOut } from "firebase/auth";
+import { signInWithEmailAndPassword, signOut, sendPasswordResetEmail } from "firebase/auth";
 import { ShieldCheck, AlertCircle } from "lucide-react";
 import { firebaseAuth } from "@/lib/firebaseClient";
 import Navbar from "@/components/Navbar";
 import Button from "@/components/Button";
+import Modal from "@/components/Modal";
 import { useLanguage } from "@/context/LanguageContext";
 
 export default function AdminLogin() {
@@ -16,6 +17,28 @@ export default function AdminLogin() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [resetOpen, setResetOpen] = useState(false);
+  const [resetId, setResetId] = useState("");
+  const [resetMessage, setResetMessage] = useState("");
+  const [resetSubmitting, setResetSubmitting] = useState(false);
+
+  async function handleReset(e) {
+    e.preventDefault();
+    setResetMessage("");
+    setResetSubmitting(true);
+    try {
+      const lookupRes = await fetch(`/api/auth/lookup?loginId=${encodeURIComponent(resetId.trim())}`);
+      const lookupData = await lookupRes.json();
+      if (lookupRes.ok) {
+        await sendPasswordResetEmail(firebaseAuth, lookupData.email).catch(() => {});
+      }
+      setResetMessage(t("adminLogin.resetSent"));
+    } catch {
+      setResetMessage(t("adminLogin.resetSent"));
+    } finally {
+      setResetSubmitting(false);
+    }
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -80,12 +103,42 @@ export default function AdminLogin() {
                 {error}
               </p>
             )}
+            <div className="text-right">
+              <button
+                type="button"
+                onClick={() => {
+                  setResetId("");
+                  setResetMessage("");
+                  setResetOpen(true);
+                }}
+                className="text-sm font-medium text-gray-700 hover:underline"
+              >
+                {t("adminLogin.forgotPassword")}
+              </button>
+            </div>
             <Button type="submit" variant="dark" loading={submitting} className="w-full">
               {submitting ? t("adminLogin.signingIn") : t("adminLogin.logIn")}
             </Button>
           </form>
         </div>
       </main>
+
+      <Modal open={resetOpen} onClose={() => !resetSubmitting && setResetOpen(false)} title={t("adminLogin.resetTitle")}>
+        <form onSubmit={handleReset} className="space-y-4">
+          <p className="text-sm text-gray-600">{t("adminLogin.resetBody")}</p>
+          <input
+            value={resetId}
+            onChange={(e) => setResetId(e.target.value)}
+            placeholder="admin"
+            required
+            className="w-full rounded-lg border-gray-300 shadow-sm focus:border-gray-500 focus:ring-gray-500"
+          />
+          {resetMessage && <p className="text-sm text-green-700">{resetMessage}</p>}
+          <Button type="submit" variant="dark" loading={resetSubmitting} className="w-full">
+            {resetSubmitting ? t("adminLogin.resetSending") : t("adminLogin.resetSend")}
+          </Button>
+        </form>
+      </Modal>
     </>
   );
 }

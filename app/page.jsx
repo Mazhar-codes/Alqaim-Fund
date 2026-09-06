@@ -211,7 +211,7 @@ export default function Landing() {
 
         <footer className="border-t border-gray-200 bg-white px-4 py-10 text-center text-sm text-gray-500 sm:px-6">
           <p>
-            © {new Date().getFullYear()} Alqaim Fund. {t("landing.footer")}
+            © {new Date().getFullYear()} AGS Fund. {t("landing.footer")}
           </p>
           <div className="mt-4 flex flex-col items-center justify-center gap-2 sm:flex-row sm:gap-4">
             <span className="font-medium text-gray-600">{t("support.contactSupport")}:</span>

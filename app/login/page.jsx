@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
 import { LogIn, AlertCircle } from "lucide-react";
 import { firebaseAuth } from "@/lib/firebaseClient";
 import Navbar from "@/components/Navbar";
 import Button from "@/components/Button";
+import Modal from "@/components/Modal";
 import { useLanguage } from "@/context/LanguageContext";
 
 export default function Login() {
@@ -16,6 +17,32 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [resetOpen, setResetOpen] = useState(false);
+  const [resetId, setResetId] = useState("");
+  const [resetMessage, setResetMessage] = useState("");
+  const [resetError, setResetError] = useState("");
+  const [resetSubmitting, setResetSubmitting] = useState(false);
+
+  async function handleReset(e) {
+    e.preventDefault();
+    setResetError("");
+    setResetMessage("");
+    setResetSubmitting(true);
+    try {
+      const lookupRes = await fetch(`/api/auth/lookup?loginId=${encodeURIComponent(resetId.trim())}`);
+      const lookupData = await lookupRes.json();
+      // Always show the same success message regardless of whether the
+      // account exists — don't let this form be used to enumerate accounts.
+      if (lookupRes.ok) {
+        await sendPasswordResetEmail(firebaseAuth, lookupData.email).catch(() => {});
+      }
+      setResetMessage(t("login.resetSent"));
+    } catch {
+      setResetMessage(t("login.resetSent"));
+    } finally {
+      setResetSubmitting(false);
+    }
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -76,6 +103,20 @@ export default function Login() {
                 {error}
               </p>
             )}
+            <div className="text-right">
+              <button
+                type="button"
+                onClick={() => {
+                  setResetId("");
+                  setResetMessage("");
+                  setResetError("");
+                  setResetOpen(true);
+                }}
+                className="text-sm font-medium text-brand-700 hover:underline"
+              >
+                {t("login.forgotPassword")}
+              </button>
+            </div>
             <Button type="submit" loading={submitting} className="w-full">
               {submitting ? t("login.signingIn") : t("login.logIn")}
             </Button>
@@ -88,6 +129,24 @@ export default function Login() {
           </a>
         </p>
       </main>
+
+      <Modal open={resetOpen} onClose={() => !resetSubmitting && setResetOpen(false)} title={t("login.resetTitle")}>
+        <form onSubmit={handleReset} className="space-y-4">
+          <p className="text-sm text-gray-600">{t("login.resetBody")}</p>
+          <input
+            value={resetId}
+            onChange={(e) => setResetId(e.target.value)}
+            placeholder="USR001"
+            required
+            className="w-full rounded-lg border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500"
+          />
+          {resetMessage && <p className="text-sm text-green-700">{resetMessage}</p>}
+          {resetError && <p className="text-sm text-red-600">{resetError}</p>}
+          <Button type="submit" loading={resetSubmitting} className="w-full">
+            {resetSubmitting ? t("login.resetSending") : t("login.resetSend")}
+          </Button>
+        </form>
+      </Modal>
     </>
   );
 }

@@ -13,7 +13,7 @@ const notoNastaliqUrdu = Noto_Nastaliq_Urdu({
 });
 
 export const metadata = {
-  title: "Alqaim Fund — Committee & Emergency Support System",
+  title: "AGS Fund — Committee & Emergency Support System",
   description: "Interest-free committee fund with emergency support loans.",
 };
 

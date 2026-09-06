@@ -1,4 +1,4 @@
-# Alqaim Fund — Committee / Chit Fund System
+# AGS Fund — Committee / Chit Fund System
 
 Online committee fund for Pakistan. Members pay a fixed monthly installment
 against one of 3 plans; after enough installments they may request an
