@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Settings as SettingsIcon, SlidersHorizontal, ShieldCheck, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Settings as SettingsIcon, SlidersHorizontal, ShieldCheck, AlertCircle, CheckCircle2, PlusCircle } from "lucide-react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Navbar from "@/components/Navbar";
 import Button from "@/components/Button";
@@ -45,6 +45,18 @@ function SettingsContent() {
     try {
       await authedFetch("/api/plans", { method: "PATCH", body: JSON.stringify(plan) });
       setMessage(`${plan.name} updated.`);
+      load();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  async function addPlan(newPlan) {
+    setError("");
+    setMessage("");
+    try {
+      await authedFetch("/api/plans", { method: "POST", body: JSON.stringify(newPlan) });
+      setMessage(`${newPlan.name} added — now live on the landing page and registration form.`);
       load();
     } catch (err) {
       setError(err.message);
@@ -132,7 +144,85 @@ function SettingsContent() {
           ))}
         </div>
       </Reveal>
+
+      <Reveal delay={150}>
+        <h2 className="mt-8 flex items-center gap-1.5 text-lg font-semibold text-gray-900">
+          <PlusCircle className="h-4 w-4 text-gray-500" />
+          Add New Plan
+        </h2>
+        <NewPlanForm onAdd={addPlan} />
+      </Reveal>
     </main>
+  );
+}
+
+function NewPlanForm({ onAdd }) {
+  const [form, setForm] = useState({ name: "", monthlyAmount: "", tenureMonths: "", maxLoanMultiplier: "" });
+  const [submitting, setSubmitting] = useState(false);
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      await onAdd({
+        name: form.name,
+        monthlyAmount: form.monthlyAmount,
+        ...(form.tenureMonths && { tenureMonths: form.tenureMonths }),
+        ...(form.maxLoanMultiplier && { maxLoanMultiplier: form.maxLoanMultiplier }),
+      });
+      setForm({ name: "", monthlyAmount: "", tenureMonths: "", maxLoanMultiplier: "" });
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="mt-3 grid gap-2 rounded-xl border bg-white p-4 shadow-sm sm:grid-cols-5 sm:items-end">
+      <div>
+        <label className="block text-xs text-gray-500">Plan Name</label>
+        <input
+          required
+          placeholder="Plan D"
+          value={form.name}
+          onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+          className="mt-1 w-full rounded-lg border-gray-300 shadow-sm transition focus:border-brand-500 focus:ring-brand-500"
+        />
+      </div>
+      <div>
+        <label className="block text-xs text-gray-500">Monthly Amount</label>
+        <input
+          type="number"
+          required
+          placeholder="Rs. 10,000"
+          value={form.monthlyAmount}
+          onChange={(e) => setForm((f) => ({ ...f, monthlyAmount: e.target.value }))}
+          className="mt-1 w-full rounded-lg border-gray-300 shadow-sm transition focus:border-brand-500 focus:ring-brand-500"
+        />
+      </div>
+      <div>
+        <label className="block text-xs text-gray-500">Tenure (months)</label>
+        <input
+          type="number"
+          placeholder="12 (default)"
+          value={form.tenureMonths}
+          onChange={(e) => setForm((f) => ({ ...f, tenureMonths: e.target.value }))}
+          className="mt-1 w-full rounded-lg border-gray-300 shadow-sm transition focus:border-brand-500 focus:ring-brand-500"
+        />
+      </div>
+      <div>
+        <label className="block text-xs text-gray-500">Max Loan Multiplier</label>
+        <input
+          type="number"
+          placeholder="20 (default)"
+          value={form.maxLoanMultiplier}
+          onChange={(e) => setForm((f) => ({ ...f, maxLoanMultiplier: e.target.value }))}
+          className="mt-1 w-full rounded-lg border-gray-300 shadow-sm transition focus:border-brand-500 focus:ring-brand-500"
+        />
+      </div>
+      <Button type="submit" loading={submitting} icon={PlusCircle}>
+        Add Plan
+      </Button>
+    </form>
   );
 }
 
