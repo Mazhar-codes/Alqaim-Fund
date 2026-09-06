@@ -788,6 +788,61 @@ spreadsheet** (not just a data-only export).
   suspend/reactivate) and password-change tracking (would need replacing
   Firebase's hosted reset page with a custom one). Revisit only if asked.
 
+## Status: Fixed a plan/member mismatch caused by editing a live plan in place (this session)
+
+User reported (via screenshots) that a member (USR013) saw "Plan A — Rs.
+1,000/mo" and a wrong "Total Remaining" on their dashboard, even though
+they'd actually signed up and paid under the original Plan A rate of
+Rs. 2,000/mo. Traced it to a real root cause, not random corruption.
+
+- **Root cause**: when the admin added the "Plan 0 (no refund)" plan
+  (Rs. 1,000/mo) using the "Add New Plan" feature from the previous
+  session, they didn't use that form — they instead **edited the existing
+  "Plan A" row in place** (via the per-plan "Save" button in the Plan
+  Amounts section) to rename it to "Plan 0(no refund)" and drop its
+  `monthlyAmount` to 1000. Then, to restore Plan A/B/C, they used "Add New
+  Plan" to create fresh rows named "Plan A" (2000), "Plan B" (3000), "Plan
+  C" (5000) — which got NEW plan ids or reused freed ones, auto-assigned
+  new codes. Every existing member's `User.planId` foreign key still
+  pointed at the OLD plan ids, which now had different names/amounts than
+  when those members joined — so their dashboard (`plan.name` +
+  `plan.monthlyAmount`, both read live via `GET /api/member/overview`) and
+  "Total Remaining" (`plan.monthlyAmount * plan.tenureMonths -
+  user.totalPaid`, also both live) started showing the wrong numbers,
+  even though every actually-money-relevant field (`Installment.amount`,
+  `amountPaid`, the ledger `Transaction` rows, `user.totalPaid`) was
+  **completely untouched and correct** the whole time — this was a
+  display/lookup bug from a stale foreign key, never a real financial data
+  loss.
+- **Diagnosis method**: read-only dump of every `Plan` row and every
+  member's `planId` + first `Installment.amount` (the frozen snapshot from
+  registration — ground truth for what they actually agreed to). Found
+  `Installment.amount` for every member exactly matched what a plan named
+  "A"/"B"/"C" was correctly priced at ORIGINALLY (2000/3000/5000) — proving
+  the members' real obligations were fine and only the FK link was stale.
+  One member (USR014) had genuinely registered mid-shuffle and was already
+  internally consistent — correctly left untouched.
+- **Fix**: reassigned `User.planId` for the 9 affected members
+  (USR004,005,006,007,008,010,011,012,013) to whichever CURRENT plan row's
+  name+amount actually matches their frozen installment amount — a pure
+  foreign-key correction, zero changes to any installment, payment,
+  transaction, or plan row itself. Verified afterward with a script
+  comparing every member's live plan amount against their frozen
+  installment amount — **0 mismatches remain**.
+- **Known harmless side effect**: plan `code` values (A/B/C/D) no longer
+  line up alphabetically with plan `name` in a tidy way (e.g. the plan
+  named "Plan B" now has `code="C"`) — `code` isn't rendered anywhere in
+  the UI (checked), so this is cosmetic-only in raw DB dumps, not worth
+  fixing unless it starts mattering somewhere.
+- **Lesson for next time, and worth telling the user directly**: the
+  per-plan "Save" button in `/admin/settings` edits that exact plan row
+  **in place** and immediately changes what EVERY member currently on that
+  plan sees and owes going forward for any NEW installment schedule built
+  from it — it is not a safe way to introduce a new plan. Use "Add New
+  Plan" for anything meant to be a distinct new plan; only use the
+  per-plan edit form to correct a genuine mistake in an EXISTING plan
+  that no one should have been paying differently for.
+
 ## Status: WHAT'S NEXT
 
 1. Decide what to do with accumulated test data (USR001, USR002 — the
