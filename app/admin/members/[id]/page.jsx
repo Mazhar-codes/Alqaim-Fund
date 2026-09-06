@@ -136,6 +136,9 @@ function MemberLedgerContent() {
     );
   }
 
+  const alreadyCharged = member.charges.reduce((sum, c) => sum + Number(c.amount), 0);
+  const availableBalance = Number(member.totalPaid) - alreadyCharged;
+
   return (
     <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
       <div className="flex flex-wrap items-start justify-between gap-4 animate-fade-in-up">
@@ -392,7 +395,14 @@ function MemberLedgerContent() {
             <Button variant="outline" size="sm" onClick={() => setChargeOpen(false)} disabled={savingCharge}>
               Cancel
             </Button>
-            <Button variant="dark" size="sm" icon={MinusCircle} loading={savingCharge} onClick={saveCharge}>
+            <Button
+              variant="dark"
+              size="sm"
+              icon={MinusCircle}
+              loading={savingCharge}
+              disabled={!chargeForm.amount || Number(chargeForm.amount) > availableBalance}
+              onClick={saveCharge}
+            >
               Deduct
             </Button>
           </>
@@ -404,16 +414,24 @@ function MemberLedgerContent() {
             balance as a manual charge. It does NOT affect their installment progress or totals — it's recorded
             separately, and they'll see a note about it on their own Transactions page.
           </p>
+          <p className="rounded-lg bg-gray-50 px-3 py-2 text-sm">
+            Available balance: <span className="font-semibold text-gray-900">Rs. {availableBalance.toLocaleString()}</span>
+            {" "}(Rs. {Number(member.totalPaid).toLocaleString()} paid so far, minus Rs. {alreadyCharged.toLocaleString()} already charged)
+          </p>
           <div>
             <label className="block text-sm font-medium text-gray-700">Amount</label>
             <input
               type="number"
               required
               min="1"
+              max={availableBalance}
               value={chargeForm.amount}
               onChange={(e) => setChargeForm((f) => ({ ...f, amount: e.target.value }))}
               className="mt-1 w-full rounded-lg border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500"
             />
+            {Number(chargeForm.amount) > availableBalance && (
+              <p className="mt-1 text-sm text-red-600">Exceeds this member's available balance.</p>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700">Reason (optional)</label>

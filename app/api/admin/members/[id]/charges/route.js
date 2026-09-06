@@ -12,6 +12,11 @@ import { appendTransaction } from "@/lib/ledger";
  * completely unaffected) — this is a separate Charge record, plus a
  * CHARGE_DEDUCTION Transaction ledger entry so the member sees a clear
  * note about it the next time they check their own Transactions page.
+ *
+ * Guard: a charge can never exceed the member's actual accumulated balance
+ * (totalPaid, minus anything already deducted as a charge) — otherwise an
+ * admin could deduct from a member who has paid nothing at all, which
+ * makes no sense ("cut money from his balance" requires a real balance).
  */
 export async function POST(request, { params }) {
   try {
@@ -23,8 +28,22 @@ export async function POST(request, { params }) {
       return NextResponse.json({ error: "A positive amount is required" }, { status: 400 });
     }
 
-    const member = await prisma.user.findUnique({ where: { id } });
+    const member = await prisma.user.findUnique({
+      where: { id },
+      include: { charges: { select: { amount: true } } },
+    });
     if (!member) return NextResponse.json({ error: "Member not found" }, { status: 404 });
+
+    const alreadyCharged = member.charges.reduce((sum, c) => sum + Number(c.amount), 0);
+    const availableBalance = Number(member.totalPaid) - alreadyCharged;
+    if (Number(amount) > availableBalance) {
+      return NextResponse.json(
+        {
+          error: `Cannot deduct Rs. ${Number(amount).toLocaleString()} — ${member.name} has only Rs. ${availableBalance.toLocaleString()} in accumulated balance (Rs. ${Number(member.totalPaid).toLocaleString()} paid, Rs. ${alreadyCharged.toLocaleString()} already charged).`,
+        },
+        { status: 400 }
+      );
+    }
 
     const charge = await prisma.$transaction(async (tx) => {
       const created = await tx.charge.create({

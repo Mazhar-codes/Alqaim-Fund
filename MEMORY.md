@@ -1021,6 +1021,48 @@ today. User chose: do the single-user version now, skip the bulk one.
   then fully deleted that test account (Firebase + DB cascade) afterward.
   `next build` clean (43 routes, one new page).
 
+## Status: Fixed the Charges balance-check gap; explained the installment date "skip" (this session)
+
+User found a real hole by testing it themselves: created a throwaway
+member (USR015) who never selected/paid for anything (totalPaid = 0), and
+was still able to deduct a Rs. 350 "charge" from them via the admin UI —
+exactly the "fool proof" gap they asked to close. Also asked whether a
+visually odd installment schedule (jumping from 1/30/2027 straight to
+3/1/2027, no February date at all) was a date-logic bug.
+
+- **Installment date "skip" — verified NOT a bug**: `computeDueDateForMonth`
+  (`lib/dueDate.js`) rolls a Sunday due date to the next day. Feb 28, 2027
+  is genuinely a Sunday, and 2027 isn't a leap year (no Feb 29) — so
+  `Date.UTC(2027, 1, 29)` legitimately overflows to March 1, 2027, same as
+  real-calendar Monday-after-Sunday-Feb-28 would. Confirmed with a direct
+  `getUTCDay()` check before answering, not assumed. This is a rare,
+  correct edge case (only occurs when a non-leap Feb 28, or a leap Feb 29,
+  lands on Sunday) — not a data or timezone bug like the earlier one this
+  project already found and fixed. Left as-is; flagged to the user as
+  "correct but rare-looking," not changed since no alternative rule was
+  requested.
+- **Charges balance-check gap — real bug, fixed**:
+  `POST /api/admin/members/[id]/charges` previously had NO check against
+  the member's actual balance — any positive amount was accepted
+  regardless of `totalPaid`. Fixed: computes
+  `availableBalance = totalPaid - sum(existing charges)` and rejects with
+  a clear error (naming the member, the attempted amount, and the actual
+  available balance) if the new charge would exceed it. The admin UI
+  (`/admin/members/[id]`'s Deduct Charge modal) now also shows this
+  available balance up front, sets `max` on the amount input, and disables
+  the Deduct button client-side when over — the server-side check is the
+  real guard, the UI just avoids a round-trip for the obvious case.
+- **Verified against the exact real scenario** (not a synthetic
+  reproduction): confirmed USR015 genuinely had `totalPaid: "0"` with the
+  bogus Rs. 350 charge still in place, attempted another charge and
+  confirmed it was correctly rejected (even correctly reported a negative
+  available balance while the bad charge was still present), then
+  reverted that original invalid charge (deleted the `Charge` row + its
+  `CHARGE_DEDUCTION` `Transaction` row) now that it's proven invalid under
+  the new rule, and re-confirmed a fresh Rs. 1 attempt is still correctly
+  blocked at Rs. 0 available. `next build` clean, no new routes (just
+  hardening two existing files).
+
 ## Status: WHAT'S NEXT
 
 1. Decide what to do with accumulated test data (USR001, USR002 — the
