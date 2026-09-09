@@ -126,6 +126,24 @@ export async function GET(request) {
       sheet.addRows(rows);
       sheet.getRow(1).font = { bold: true };
 
+      if (type === "donations") {
+        const expenses = await prisma.donationExpense.findMany({ orderBy: { spentDate: "desc" } });
+        const expenseSheet = workbook.addWorksheet("expenses");
+        expenseSheet.columns = [
+          { header: "Description", key: "description", width: 32 },
+          { header: "Amount", key: "amount", width: 14 },
+          { header: "Spent Date", key: "spentDate", width: 14 },
+        ];
+        expenseSheet.addRows(
+          expenses.map((e) => ({
+            description: e.description,
+            amount: Number(e.amount),
+            spentDate: e.spentDate.toISOString().slice(0, 10),
+          }))
+        );
+        expenseSheet.getRow(1).font = { bold: true };
+      }
+
       const buffer = await workbook.xlsx.writeBuffer();
       return new NextResponse(buffer, {
         headers: {

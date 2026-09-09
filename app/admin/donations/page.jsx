@@ -1,36 +1,66 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Gift, ExternalLink, Inbox, CheckCircle2, XCircle, Download } from "lucide-react";
+import { Gift, ExternalLink, Inbox, CheckCircle2, XCircle, Download, MinusCircle } from "lucide-react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Navbar from "@/components/Navbar";
 import StatusBadge from "@/components/StatusBadge";
 import Button from "@/components/Button";
 import Modal from "@/components/Modal";
 import Reveal from "@/components/Reveal";
+import FileDropzone from "@/components/FileDropzone";
 import { useAuth } from "@/context/AuthContext";
 import { formatDate } from "@/lib/formatDate";
 import { timestampedFilename } from "@/lib/exportFilename";
 import { firebaseAuth } from "@/lib/firebaseClient";
+import { uploadToCloudinary } from "@/lib/cloudinary";
 
 function DonationsContent() {
   const { authedFetch } = useAuth();
   const [donations, setDonations] = useState(null);
+  const [expenses, setExpenses] = useState(null);
+  const [balance, setBalance] = useState(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [rejectDialog, setRejectDialog] = useState(null); // donation being rejected
   const [rejectReason, setRejectReason] = useState("");
+  const [expenseForm, setExpenseForm] = useState({ description: "", amount: "", spentDate: "" });
+  const [expenseFile, setExpenseFile] = useState(null);
+  const [expenseSubmitting, setExpenseSubmitting] = useState(false);
+  const [expenseError, setExpenseError] = useState("");
 
   function load() {
     authedFetch("/api/admin/donations").then((d) => setDonations(d.donations || []));
+    authedFetch("/api/admin/donations/expenses").then((d) => {
+      setExpenses(d.expenses || []);
+      setBalance(d.balance || null);
+    });
   }
 
   useEffect(load, [authedFetch]);
 
   const pending = donations?.filter((d) => d.status === "PENDING") ?? [];
-  const total = donations?.filter((d) => d.status === "APPROVED").reduce((sum, d) => sum + Number(d.amount), 0) ?? 0;
+  const overspending = Number(expenseForm.amount) > (balance?.available ?? 0);
+
+  async function submitExpense(e) {
+    e.preventDefault();
+    setExpenseError("");
+    setExpenseSubmitting(true);
+    try {
+      const proofUrl = expenseFile ? await uploadToCloudinary(expenseFile, "donation_expense_proofs") : null;
+      await authedFetch("/api/admin/donations/expenses", { method: "POST", body: JSON.stringify({ ...expenseForm, proofUrl }) });
+      setMessage("Expense recorded.");
+      setExpenseForm({ description: "", amount: "", spentDate: "" });
+      setExpenseFile(null);
+      load();
+    } catch (err) {
+      setExpenseError(err.message);
+    } finally {
+      setExpenseSubmitting(false);
+    }
+  }
 
   async function approve(donationId) {
     setError("");
@@ -96,7 +126,9 @@ function DonationsContent() {
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Donations</h1>
             <p className="text-sm text-gray-500">
-              {donations === null ? "Loading…" : `${donations.length} donation(s), Rs. ${total.toLocaleString()} approved total`}
+              {balance === null
+                ? "Loading…"
+                : `Rs. ${balance.totalDonations.toLocaleString()} approved · Rs. ${balance.totalSpent.toLocaleString()} spent · Rs. ${balance.available.toLocaleString()} available`}
             </p>
           </div>
         </div>
@@ -233,6 +265,102 @@ function DonationsContent() {
                   <div className="flex flex-col items-center gap-2 text-gray-400">
                     <Inbox className="h-8 w-8" />
                     No donations yet
+                  </div>
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </Reveal>
+
+      <Reveal>
+        <h2 className="mt-10 flex items-center gap-2 text-lg font-semibold text-gray-900">
+          <MinusCircle className="h-5 w-5 text-brand-600" />
+          Record an Expense
+        </h2>
+        <p className="mt-1 text-sm text-gray-500">
+          Money spent out of the donations pool — relief given, supplies bought, etc. Can't exceed the Rs.{" "}
+          {(balance?.available ?? 0).toLocaleString()} currently available.
+        </p>
+        <form onSubmit={submitExpense} className="mt-3 grid gap-3 rounded-xl border bg-white p-5 shadow-sm sm:grid-cols-2">
+          <input
+            placeholder="Description (e.g. Relief for USR012's family)"
+            required
+            value={expenseForm.description}
+            onChange={(e) => setExpenseForm((f) => ({ ...f, description: e.target.value }))}
+            className="rounded-lg border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 sm:col-span-2"
+          />
+          <input
+            type="number"
+            placeholder="Amount"
+            required
+            min="1"
+            max={balance?.available ?? 0}
+            value={expenseForm.amount}
+            onChange={(e) => setExpenseForm((f) => ({ ...f, amount: e.target.value }))}
+            className="rounded-lg border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500"
+          />
+          <input
+            type="date"
+            required
+            value={expenseForm.spentDate}
+            onChange={(e) => setExpenseForm((f) => ({ ...f, spentDate: e.target.value }))}
+            className="rounded-lg border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500"
+          />
+          {overspending && (
+            <p className="text-sm text-red-600 sm:col-span-2">Exceeds the Rs. {(balance?.available ?? 0).toLocaleString()} available.</p>
+          )}
+          <div className="sm:col-span-2">
+            <FileDropzone file={expenseFile} onChange={setExpenseFile} label="Click to upload a receipt (optional)" />
+          </div>
+          {expenseError && <p className="text-sm text-red-600 sm:col-span-2">{expenseError}</p>}
+          <Button type="submit" loading={expenseSubmitting} disabled={overspending} className="sm:col-span-2">
+            Record Expense
+          </Button>
+        </form>
+      </Reveal>
+
+      <h2 className="mt-10 text-lg font-semibold text-gray-900">Expense History</h2>
+      <Reveal className="mt-3 overflow-x-auto rounded-xl border bg-white shadow-sm">
+        <table className="w-full text-left text-sm">
+          <thead className="bg-gray-50 text-gray-600">
+            <tr>
+              <th className="px-4 py-2">Date</th>
+              <th className="px-4 py-2">Description</th>
+              <th className="px-4 py-2">Amount</th>
+              <th className="px-4 py-2">Receipt</th>
+            </tr>
+          </thead>
+          <tbody>
+            {expenses === null && (
+              <tr>
+                <td colSpan={4} className="p-4">
+                  <div className="skeleton h-24 rounded-lg" />
+                </td>
+              </tr>
+            )}
+            {expenses?.map((exp) => (
+              <tr key={exp.id} className="border-t transition-colors hover:bg-gray-50">
+                <td className="px-4 py-2">{formatDate(exp.spentDate)}</td>
+                <td className="px-4 py-2">{exp.description}</td>
+                <td className="px-4 py-2 font-medium text-red-700">Rs. {Number(exp.amount).toLocaleString()}</td>
+                <td className="px-4 py-2">
+                  {exp.proofUrl ? (
+                    <a href={exp.proofUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-brand-700 hover:underline">
+                      View <ExternalLink className="h-3 w-3" />
+                    </a>
+                  ) : (
+                    "—"
+                  )}
+                </td>
+              </tr>
+            ))}
+            {expenses?.length === 0 && (
+              <tr>
+                <td colSpan={4} className="px-4 py-10">
+                  <div className="flex flex-col items-center gap-2 text-gray-400">
+                    <Inbox className="h-8 w-8" />
+                    No expenses recorded yet
                   </div>
                 </td>
               </tr>

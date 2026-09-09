@@ -147,6 +147,21 @@ model Donation {
   @@map("donations")
 }
 
+// Money spent out of the approved-donations pool (relief handed out, supplies
+// bought, etc). Never linked to a User — this is the fund's own spending, not
+// a member's ledger entry. amount can never push totalSpent above the
+// approved-donations total; enforced in the API, same guard shape as Charges.
+model DonationExpense {
+  id          Int      @id @default(autoincrement())
+  description String
+  amount      Decimal  @db.Decimal(12, 2)
+  spentDate   DateTime
+  proofUrl    String?
+  createdAt   DateTime @default(now())
+
+  @@map("donation_expenses")
+}
+
 model Installment {
   id                Int               @id @default(autoincrement())
   userId            Int
