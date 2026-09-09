@@ -38,7 +38,8 @@ export default function Login() {
   useEffect(() => {
     try {
       const remembered = localStorage.getItem(LAST_MEMBER_ID_KEY);
-      if (remembered) setMemberId(remembered);
+      if (remembered === "ADMIN") localStorage.removeItem(LAST_MEMBER_ID_KEY);
+      else if (remembered) setMemberId(remembered);
     } catch {
       // localStorage can throw in private-browsing/blocked-storage contexts — fine to skip.
     }
@@ -99,7 +100,12 @@ export default function Login() {
       const tokenResult = await cred.user.getIdTokenResult();
 
       try {
-        localStorage.setItem(LAST_MEMBER_ID_KEY, memberId.trim().toUpperCase());
+        // Never remember the admin login ID — it would sit in this browser's
+        // localStorage and get pre-filled for the next person who opens this
+        // page, disclosing that "ADMIN" is a valid login.
+        const enteredId = memberId.trim().toUpperCase();
+        if (enteredId === "ADMIN") localStorage.removeItem(LAST_MEMBER_ID_KEY);
+        else localStorage.setItem(LAST_MEMBER_ID_KEY, enteredId);
       } catch {
         // ignore — same private-browsing/blocked-storage case as above
       }
