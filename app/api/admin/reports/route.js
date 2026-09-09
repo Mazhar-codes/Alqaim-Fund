@@ -2,9 +2,10 @@ import { NextResponse } from "next/server";
 import ExcelJS from "exceljs";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin, AuthError } from "@/lib/auth";
+import { timestampedFilename } from "@/lib/exportFilename";
 
 /**
- * GET /api/admin/reports?type=collection|defaulters|loans&format=json|xlsx
+ * GET /api/admin/reports?type=collection|defaulters|loans|donations&format=json|xlsx
  */
 export async function GET(request) {
   try {
@@ -92,6 +93,28 @@ export async function GET(request) {
         status: l.status,
         createdAt: l.createdAt.toISOString().slice(0, 10),
       }));
+    } else if (type === "donations") {
+      // Only APPROVED donations — a pending or rejected submission hasn't
+      // actually been verified as real money received, so it doesn't belong
+      // in a collection report.
+      const donations = await prisma.donation.findMany({
+        where: { status: "APPROVED" },
+        orderBy: { createdAt: "desc" },
+      });
+      columns = [
+        { header: "Donor Name", key: "donorName", width: 24 },
+        { header: "Phone", key: "donorPhone", width: 16 },
+        { header: "Amount", key: "amount", width: 14 },
+        { header: "Transaction ID", key: "transactionId", width: 20 },
+        { header: "Date", key: "createdAt", width: 14 },
+      ];
+      rows = donations.map((d) => ({
+        donorName: d.donorName,
+        donorPhone: d.donorPhone,
+        amount: Number(d.amount),
+        transactionId: d.transactionId || "—",
+        createdAt: d.createdAt.toISOString().slice(0, 10),
+      }));
     } else {
       return NextResponse.json({ error: "Unknown report type" }, { status: 400 });
     }
@@ -107,7 +130,7 @@ export async function GET(request) {
       return new NextResponse(buffer, {
         headers: {
           "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-          "Content-Disposition": `attachment; filename="${type}-report.xlsx"`,
+          "Content-Disposition": `attachment; filename="${timestampedFilename(`${type}-report`)}"`,
         },
       });
     }

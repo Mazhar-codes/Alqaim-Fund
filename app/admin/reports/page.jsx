@@ -8,11 +8,13 @@ import Button from "@/components/Button";
 import Reveal from "@/components/Reveal";
 import { useAuth } from "@/context/AuthContext";
 import { firebaseAuth } from "@/lib/firebaseClient";
+import { timestampedFilename } from "@/lib/exportFilename";
 
 const REPORTS = [
   { type: "collection", label: "Monthly Collection Report" },
   { type: "defaulters", label: "Defaulters Report" },
   { type: "loans", label: "Loan / Emergency Fund Report" },
+  { type: "donations", label: "Donations Report" },
 ];
 
 function ReportsContent() {
@@ -43,7 +45,7 @@ function ReportsContent() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${type}-report.xlsx`;
+      a.download = timestampedFilename(`${type}-report`);
       a.click();
       URL.revokeObjectURL(url);
     } finally {

@@ -9,6 +9,7 @@ import {
   ClipboardCheck,
   ArrowUpRight,
   FileBarChart,
+  Gift,
 } from "lucide-react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Navbar from "@/components/Navbar";
@@ -49,8 +50,15 @@ function OverviewContent() {
           icon={ClipboardCheck}
           label="Pending Verifications"
           value={stats.pendingVerifications}
-          sub="payments + loan requests"
+          sub="payments + loans + donations"
           accent={stats.pendingVerifications > 0 ? "text-amber-600" : "text-gray-900"}
+        />
+        <Card
+          icon={Gift}
+          label="Total Donations"
+          value={`Rs. ${stats.totalDonations.toLocaleString()}`}
+          sub="approved only"
+          accent="text-pink-600"
         />
       </div>
 
@@ -66,6 +74,12 @@ function OverviewContent() {
           href="/admin/loans"
           title="Loan / Emergency Fund Queue"
           desc={`${stats.pendingLoanRequests} request(s) waiting for approval`}
+        />
+        <QuickLink
+          icon={Gift}
+          href="/admin/donations"
+          title="Donation Verification Queue"
+          desc={`${stats.pendingDonationVerifications} donation(s) waiting for review`}
         />
         <QuickLink icon={Users} href="/admin/members" title="Member Management" desc="Search, edit, suspend, view full ledger" />
         <QuickLink
@@ -119,7 +133,7 @@ function OverviewSkeleton() {
     <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
       <div className="skeleton h-8 w-56 rounded-lg" />
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {[0, 1, 2, 3].map((i) => (
+        {[0, 1, 2, 3, 4].map((i) => (
           <div key={i} className="skeleton h-24 rounded-xl" />
         ))}
       </div>

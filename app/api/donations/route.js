@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
  * POST /api/donations — public, no auth required. Anyone (member or fully
  * anonymous visitor) can submit a donation record from the landing page's
  * "Donate" modal. Body: { donorName, donorPhone, amount, transactionId?, proofUrl? }
+ * Recorded as PENDING — it only counts toward totals once an admin approves it.
  */
 export async function POST(request) {
   try {
