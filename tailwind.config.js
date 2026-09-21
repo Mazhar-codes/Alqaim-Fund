@@ -71,7 +71,7 @@ module.exports = {
         "scale-in": "scale-in 0.15s ease-out both",
         shimmer: "shimmer 1.6s infinite linear",
         float: "float 5s ease-in-out infinite",
-        marquee: "marquee 25s linear infinite",
+        marquee: "marquee 40s linear infinite",
       },
     },
   },
