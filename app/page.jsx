@@ -28,8 +28,10 @@ import TiltCard from "@/components/TiltCard";
 import Modal from "@/components/Modal";
 import Button from "@/components/Button";
 import FileDropzone from "@/components/FileDropzone";
+import DonationTicker from "@/components/DonationTicker";
 import { uploadToCloudinary } from "@/lib/cloudinary";
 import { toWhatsAppNumber } from "@/lib/validators";
+import { DONATION_PURPOSES } from "@/lib/donationPurposes";
 import { useLanguage } from "@/context/LanguageContext";
 
 const SUPPORT_PHONE_DISPLAY = "+92 307 5941906";
@@ -46,9 +48,10 @@ const DONATE_IBAN = "PK88BAHL5798008100010601";
 export default function Landing() {
   const { t } = useLanguage();
   const [plans, setPlans] = useState([]);
+  const [gallery, setGallery] = useState([]);
   const [donateOpen, setDonateOpen] = useState(false);
   const [ibanCopied, setIbanCopied] = useState(false);
-  const [donateForm, setDonateForm] = useState({ donorName: "", donorPhone: "", amount: "", transactionId: "" });
+  const [donateForm, setDonateForm] = useState({ donorName: "", donorPhone: "", amount: "", purpose: "", transactionId: "" });
   const [donateFile, setDonateFile] = useState(null);
   const [donateSubmitting, setDonateSubmitting] = useState(false);
   const [donateError, setDonateError] = useState("");
@@ -65,7 +68,7 @@ export default function Landing() {
   }
 
   function openDonate() {
-    setDonateForm({ donorName: "", donorPhone: "", amount: "", transactionId: "" });
+    setDonateForm({ donorName: "", donorPhone: "", amount: "", purpose: "", transactionId: "" });
     setDonateFile(null);
     setDonateError("");
     setDonateSuccess(false);
@@ -97,6 +100,10 @@ export default function Landing() {
     fetch("/api/plans")
       .then((r) => r.json())
       .then((d) => setPlans(d.plans || []));
+    fetch("/api/gallery")
+      .then((r) => r.json())
+      .then((d) => setGallery(d.images || []))
+      .catch(() => setGallery([]));
   }, []);
 
   const STEPS = [
@@ -113,6 +120,7 @@ export default function Landing() {
 
   return (
     <>
+      <DonationTicker />
       <Navbar variant="public" />
 
       <main className="overflow-x-hidden">
@@ -243,6 +251,37 @@ export default function Landing() {
               ))}
           </div>
         </section>
+
+        {/* Gallery */}
+        {gallery.length > 0 && (
+          <section className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
+            <Reveal className="text-center">
+              <h2 className="text-2xl font-bold text-gray-900 sm:text-3xl">{t("landing.galleryTitle")}</h2>
+              <p className="mt-2 text-gray-500">{t("landing.gallerySub")}</p>
+            </Reveal>
+
+            <div className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+              {gallery.map((img, i) => (
+                <Reveal key={img.id} delay={(i % 8) * 60}>
+                  <div className="group relative aspect-square overflow-hidden rounded-2xl border border-gray-200 bg-gray-100 shadow-sm">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={img.imageUrl}
+                      alt={img.caption || "AGS Fund activity"}
+                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      loading="lazy"
+                    />
+                    {img.caption && (
+                      <p className="absolute inset-x-0 bottom-0 truncate bg-gradient-to-t from-black/70 to-transparent px-3 py-2 text-xs font-medium text-white">
+                        {img.caption}
+                      </p>
+                    )}
+                  </div>
+                </Reveal>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Features */}
         <section className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
@@ -400,6 +439,42 @@ export default function Landing() {
                   onChange={(e) => setDonateForm((f) => ({ ...f, amount: e.target.value }))}
                   className="w-full rounded-lg border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500"
                 />
+                <div>
+                  <p className="mb-1.5 text-sm font-medium text-gray-700">{t("donate.formPurpose")}</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {DONATION_PURPOSES.map((p) => (
+                      <label
+                        key={p.value}
+                        className={`flex cursor-pointer items-center justify-center rounded-lg border px-2 py-2 text-center text-xs font-medium transition-colors ${
+                          donateForm.purpose === p.value
+                            ? "border-brand-500 bg-brand-50 text-brand-700"
+                            : "border-gray-300 text-gray-600 hover:border-brand-300"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="donatePurpose"
+                          value={p.value}
+                          required
+                          checked={donateForm.purpose === p.value}
+                          onChange={() => setDonateForm((f) => ({ ...f, purpose: p.value }))}
+                          className="sr-only"
+                        />
+                        {t(
+                          `donate.${
+                            p.value === "SADQA"
+                              ? "purposeSadqa"
+                              : p.value === "KHUMS"
+                                ? "purposeKhums"
+                                : p.value === "GENERAL_FUND"
+                                  ? "purposeGeneralFund"
+                                  : "purposeYoumEInhadam"
+                          }`
+                        )}
+                      </label>
+                    ))}
+                  </div>
+                </div>
                 <input
                   placeholder={t("donate.formTransactionId")}
                   value={donateForm.transactionId}

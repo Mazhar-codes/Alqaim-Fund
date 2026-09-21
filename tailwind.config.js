@@ -59,6 +59,10 @@ module.exports = {
           "0%, 100%": { transform: "translateY(0) rotate(var(--float-rot, -3deg))" },
           "50%": { transform: "translateY(-14px) rotate(var(--float-rot, -3deg))" },
         },
+        marquee: {
+          "0%": { transform: "translateX(0)" },
+          "100%": { transform: "translateX(-50%)" },
+        },
       },
       animation: {
         "fade-in-up": "fade-in-up 0.6s ease-out both",
@@ -67,6 +71,7 @@ module.exports = {
         "scale-in": "scale-in 0.15s ease-out both",
         shimmer: "shimmer 1.6s infinite linear",
         float: "float 5s ease-in-out infinite",
+        marquee: "marquee 30s linear infinite",
       },
     },
   },

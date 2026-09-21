@@ -3,6 +3,7 @@ import ExcelJS from "exceljs";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin, AuthError } from "@/lib/auth";
 import { timestampedFilename } from "@/lib/exportFilename";
+import { donationPurposeLabel } from "@/lib/donationPurposes";
 
 /**
  * GET /api/admin/reports?type=collection|defaulters|loans|donations&format=json|xlsx
@@ -105,6 +106,7 @@ export async function GET(request) {
         { header: "Donor Name", key: "donorName", width: 24 },
         { header: "Phone", key: "donorPhone", width: 16 },
         { header: "Amount", key: "amount", width: 14 },
+        { header: "Purpose", key: "purpose", width: 20 },
         { header: "Transaction ID", key: "transactionId", width: 20 },
         { header: "Date", key: "createdAt", width: 14 },
       ];
@@ -112,6 +114,7 @@ export async function GET(request) {
         donorName: d.donorName,
         donorPhone: d.donorPhone,
         amount: Number(d.amount),
+        purpose: donationPurposeLabel(d.purpose),
         transactionId: d.transactionId || "—",
         createdAt: d.createdAt.toISOString().slice(0, 10),
       }));

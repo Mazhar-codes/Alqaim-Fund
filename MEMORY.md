@@ -1063,6 +1063,91 @@ visually odd installment schedule (jumping from 1/30/2027 straight to
   blocked at Rs. 0 available. `next build` clean, no new routes (just
   hardening two existing files).
 
+## Status: Donation purpose, homepage gallery, scrolling donations banner (this session)
+
+User asked for three homepage/donation features in one message: (1) a
+donation-purpose selector (Sadqa, Khums, General Fund,
+Youm-e-Inhadam-e-Jannat-ul-Baqi) saved to the DB and visible to admin, (2) a
+homepage Gallery section admin can add/remove photos to via Cloudinary, (3)
+a right-to-left scrolling banner (like e-commerce "sale live" tickers)
+showing real donations. Asked two clarifying questions up front: purpose as
+single-choice vs multi-select checkboxes (**user chose single-choice**,
+confirming it should be saved to the DB and shown in admin), and whether the
+ticker should show real donor names or anonymize them (**user chose real
+names**).
+
+- **Schema** (migration `20260921085139_add_donation_purpose_and_gallery`,
+  applied to the real Neon DB): added `enum DonationPurpose` (`SADQA`,
+  `KHUMS`, `GENERAL_FUND`, `YOUM_E_INHADAM_E_JANNAT_UL_BAQI`) and
+  `Donation.purpose` (`@default(GENERAL_FUND)` so the 2 pre-existing
+  donation rows didn't break). New `GalleryImage` model (`imageUrl`,
+  `caption?`, `createdAt`) — deliberately not linked to a `User`, admin-only
+  content.
+- **`lib/donationPurposes.js`** (new) — the single source of truth for the
+  4 purposes (`DONATION_PURPOSES` array with en/ur labels) and
+  `donationPurposeLabel(purpose, lang)`, used by the landing page selector,
+  the admin donations table, and the donations Excel report.
+- **Donate form** (`app/page.jsx`): added a required styled radio-pill
+  group (4 options, single choice — not literal checkboxes, per the user's
+  explicit choice) between Amount and Transaction ID. `POST /api/donations`
+  now rejects any submission without a valid `purpose` (400).
+- **Admin visibility**: `/admin/donations` (Pending + All tables) and the
+  donations Excel/JSON report (`/api/admin/reports?type=donations`) both
+  gained a Purpose column via the same `donationPurposeLabel` helper.
+- **Public donations ticker**: `GET /api/donations` (new on the existing
+  route file) returns only the latest 20 **APPROVED** donations, and only
+  `donorName`/`amount`/`purpose`/`createdAt` — never phone or proof, and
+  never PENDING/REJECTED ones. `components/DonationTicker.jsx` (new)
+  consumes it, renders a `dir="ltr"`-forced (so it always scrolls the same
+  way regardless of the Urdu/RTL toggle) CSS marquee — `tailwind.config.js`
+  gained a `marquee` keyframe/animation (`translateX(0)` → `translateX(-50%)`
+  over a doubled item list for a seamless loop). Falls back to a generic
+  "donate today" message (translated) when there are zero approved
+  donations yet, so the banner is never empty/broken on a fresh install.
+  Mounted at the very top of `app/page.jsx`, above `<Navbar>` (scrolls away
+  normally; the sticky navbar then sticks right below where it was).
+- **Gallery — admin CRUD**: `GET/POST /api/admin/gallery` (list + add,
+  admin-only) and `DELETE /api/admin/gallery/[id]` (admin-only). New
+  `app/admin/gallery/page.jsx` — `FileDropzone` + optional caption,
+  `uploadToCloudinary(file, "gallery")` then POST the resulting URL (the
+  established pattern — Cloudinary upload always happens client-side, the
+  API only ever stores a URL). Delete goes through a `Modal` confirmation
+  (not a raw click) since it's an irreversible admin action, consistent
+  with how reject/delete flows are handled elsewhere in this app. Added
+  "Gallery" to `ADMIN_LINKS` in `Navbar.jsx` (new `Images` icon) +
+  `nav.gallery` translation.
+- **Gallery — public homepage section**: `GET /api/gallery` (new, public,
+  no auth) — all photos, newest first. `app/page.jsx` fetches it on mount
+  and renders an "Our Activities" grid section between Plans and Features
+  — **the section renders nothing at all if there are zero photos** (not an
+  empty placeholder), so a fresh install with no photos yet looks
+  intentional, not broken.
+- **Verified live end-to-end against the real Neon DB** (not just
+  build-checked): started `next dev`, used the same
+  real-Firebase-custom-token-exchange trick as prior sessions (temp script,
+  deleted after use — see that pattern in earlier entries if reused again)
+  to get a real admin ID token, then via curl: submitted a real donation
+  with `purpose=SADQA` (confirmed 400 on missing/invalid purpose), approved
+  it as admin, confirmed it appeared correctly in the public ticker endpoint
+  with only the expected fields; added a real gallery photo as admin,
+  confirmed it appeared on the public `/api/gallery`, confirmed a
+  no-token POST to the admin gallery endpoint correctly 401s, then deleted
+  it and confirmed the public list emptied again. Cleaned up all test rows
+  afterward (deleted the test donation directly via Prisma — there's
+  deliberately no donation-delete API, financial records aren't meant to
+  be deletable from the UI). `next build` clean (all routes, including the
+  3 new ones). `curl`'d both `/` and `/admin/gallery` against the running
+  dev server and grepped its log for errors — none found.
+- Browser-based visual verification (screenshots) was **not** done this
+  session — the Claude-in-Chrome extension reported "not connected" when
+  attempted. Everything was verified via real HTTP calls against the real
+  DB instead (stronger than a build check, but not a substitute for
+  actually looking at the rendered page) — worth a real visual pass next
+  time the browser extension is available, especially the marquee's scroll
+  speed/spacing and the gallery grid's responsive layout.
+- Not yet committed/pushed — ask the user before pushing, per the
+  established pattern in this project.
+
 ## Status: WHAT'S NEXT
 
 1. Decide what to do with accumulated test data (USR001, USR002 — the

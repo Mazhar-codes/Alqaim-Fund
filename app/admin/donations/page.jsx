@@ -14,6 +14,7 @@ import { formatDate } from "@/lib/formatDate";
 import { timestampedFilename } from "@/lib/exportFilename";
 import { firebaseAuth } from "@/lib/firebaseClient";
 import { uploadToCloudinary } from "@/lib/cloudinary";
+import { donationPurposeLabel } from "@/lib/donationPurposes";
 
 function DonationsContent() {
   const { authedFetch } = useAuth();
@@ -149,6 +150,7 @@ function DonationsContent() {
               <th className="px-4 py-2">Donor Name</th>
               <th className="px-4 py-2">Phone</th>
               <th className="px-4 py-2">Amount</th>
+              <th className="px-4 py-2">Purpose</th>
               <th className="px-4 py-2">Transaction ID</th>
               <th className="px-4 py-2">Proof</th>
               <th className="px-4 py-2"></th>
@@ -157,7 +159,7 @@ function DonationsContent() {
           <tbody>
             {donations === null && (
               <tr>
-                <td colSpan={7} className="p-4">
+                <td colSpan={8} className="p-4">
                   <div className="skeleton h-24 rounded-lg" />
                 </td>
               </tr>
@@ -168,6 +170,7 @@ function DonationsContent() {
                 <td className="px-4 py-2">{d.donorName}</td>
                 <td className="px-4 py-2">{d.donorPhone}</td>
                 <td className="px-4 py-2 font-medium text-green-700">Rs. {Number(d.amount).toLocaleString()}</td>
+                <td className="px-4 py-2">{donationPurposeLabel(d.purpose)}</td>
                 <td className="px-4 py-2">{d.transactionId || "—"}</td>
                 <td className="px-4 py-2">
                   {d.proofUrl ? (
@@ -201,7 +204,7 @@ function DonationsContent() {
             ))}
             {donations !== null && pending.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-10">
+                <td colSpan={8} className="px-4 py-10">
                   <div className="flex flex-col items-center gap-2 text-gray-400">
                     <Inbox className="h-8 w-8" />
                     Nothing pending
@@ -222,6 +225,7 @@ function DonationsContent() {
               <th className="px-4 py-2">Donor Name</th>
               <th className="px-4 py-2">Phone</th>
               <th className="px-4 py-2">Amount</th>
+              <th className="px-4 py-2">Purpose</th>
               <th className="px-4 py-2">Transaction ID</th>
               <th className="px-4 py-2">Proof</th>
               <th className="px-4 py-2">Status</th>
@@ -230,7 +234,7 @@ function DonationsContent() {
           <tbody>
             {donations === null && (
               <tr>
-                <td colSpan={7} className="p-4">
+                <td colSpan={8} className="p-4">
                   <div className="skeleton h-24 rounded-lg" />
                 </td>
               </tr>
@@ -241,6 +245,7 @@ function DonationsContent() {
                 <td className="px-4 py-2">{d.donorName}</td>
                 <td className="px-4 py-2">{d.donorPhone}</td>
                 <td className="px-4 py-2 font-medium text-green-700">Rs. {Number(d.amount).toLocaleString()}</td>
+                <td className="px-4 py-2">{donationPurposeLabel(d.purpose)}</td>
                 <td className="px-4 py-2">{d.transactionId || "—"}</td>
                 <td className="px-4 py-2">
                   {d.proofUrl ? (
@@ -261,7 +266,7 @@ function DonationsContent() {
             ))}
             {donations?.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-10">
+                <td colSpan={8} className="px-4 py-10">
                   <div className="flex flex-col items-center gap-2 text-gray-400">
                     <Inbox className="h-8 w-8" />
                     No donations yet
