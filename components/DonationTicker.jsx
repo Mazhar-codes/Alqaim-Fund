@@ -24,8 +24,16 @@ export default function DonationTicker() {
         )
       : [t("donate.tickerFallback")];
 
-  // Duplicated once so the 0% -> -50% translateX loop is seamless.
-  const track = [...items, ...items];
+  // With few real donations (or just the fallback message), one copy of
+  // `items` can be narrower than a wide desktop viewport — the strip would
+  // then run out of content partway across instead of spanning edge to
+  // edge. Repeat it until it's comfortably wider than any realistic screen
+  // (~16 entries), THEN duplicate that padded set once so the 0% -> -50%
+  // translateX loop is seamless.
+  const MIN_SET_SIZE = 16;
+  const repeats = Math.max(1, Math.ceil(MIN_SET_SIZE / items.length));
+  const set = Array.from({ length: repeats }, () => items).flat();
+  const track = [...set, ...set];
 
   return (
     <div dir="ltr" className="overflow-hidden border-b border-brand-800 bg-gradient-to-r from-brand-800 to-brand-900 py-2">
