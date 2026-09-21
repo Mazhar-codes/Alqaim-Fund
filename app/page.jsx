@@ -20,6 +20,7 @@ import {
   Landmark,
   Send,
   CheckCircle2,
+  Images,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import PlanCard from "@/components/PlanCard";
@@ -200,6 +201,15 @@ export default function Landing() {
               >
                 {t("landing.memberLogin")}
               </Link>
+              {gallery.length > 0 && (
+                <Link
+                  href="#gallery"
+                  className="flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-6 py-3 font-medium text-gray-700 transition-all hover:-translate-y-0.5 hover:border-gray-400 hover:shadow-md"
+                >
+                  <Images className="h-4 w-4" />
+                  {t("landing.viewGallery")}
+                </Link>
+              )}
               <button
                 onClick={openDonate}
                 className="group flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-pink-600 to-rose-500 px-6 py-3 font-medium text-white shadow-md shadow-pink-200 transition-all hover:-translate-y-0.5 hover:shadow-lg"
@@ -254,7 +264,7 @@ export default function Landing() {
 
         {/* Gallery */}
         {gallery.length > 0 && (
-          <section className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
+          <section id="gallery" className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
             <Reveal className="text-center">
               <h2 className="text-2xl font-bold text-gray-900 sm:text-3xl">{t("landing.galleryTitle")}</h2>
               <p className="mt-2 text-gray-500">{t("landing.gallerySub")}</p>
