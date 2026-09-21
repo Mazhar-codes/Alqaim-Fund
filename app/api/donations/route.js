@@ -4,6 +4,11 @@ import { DONATION_PURPOSES } from "@/lib/donationPurposes";
 
 const VALID_PURPOSES = DONATION_PURPOSES.map((p) => p.value);
 
+// Prevents Next.js from statically caching the GET below at build/deploy time —
+// see the same fix in app/api/gallery/route.js for why that's a real risk
+// here (bare GET(), no request param, no dynamic APIs used).
+export const dynamic = "force-dynamic";
+
 /**
  * POST /api/donations — public, no auth required. Anyone (member or fully
  * anonymous visitor) can submit a donation record from the landing page's

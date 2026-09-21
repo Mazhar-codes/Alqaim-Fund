@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin, AuthError } from "@/lib/auth";
 
+// Prevents Next.js from statically caching this GET at build/deploy time —
+// see the same fix in app/api/gallery/route.js for why that's a real risk
+// here (bare GET(), no request param, no dynamic APIs used).
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   const plans = await prisma.plan.findMany({ orderBy: { monthlyAmount: "asc" } });
   return NextResponse.json({ plans });
